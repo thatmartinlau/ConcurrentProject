@@ -12,7 +12,12 @@
 #include <cmath>
 
 int main() {
+    Magick::InitializeMagick(nullptr);
+    MagickCore::SetMagickResourceLimit(MagickCore::AreaResource, 1024*1024*256);  // 256MB
+    MagickCore::SetMagickResourceLimit(MagickCore::MemoryResource, 1024*1024*512);  // 512MB
+    MagickCore::SetMagickResourceLimit(MagickCore::MapResource, 1024*1024*512);    // 512MB
     
+
     /* 
     System universe;
     

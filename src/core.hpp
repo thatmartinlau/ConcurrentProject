@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <string>
-#include <fstream>
+#include <Magick++.h>
 
 #define STEP_COUNT 500
 #define G 6.67430e-11
@@ -43,7 +43,6 @@ class System {
     private:
         std::pair<Vector, Vector> getBounds() const;
         std::pair<int, int> worldToScreen(const Vector& pos, const Vector& min, const Vector& max, int width, int height) const;
-        void writePPM(const std::string& filename, const std::vector<std::vector<uint8_t>>& image, int width, int height);
 
 };
 

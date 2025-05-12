@@ -1,6 +1,8 @@
 #include "core.hpp"
 #include <cmath>
 #include <fstream>
+#include <Magick++.h>
+using namespace Magick;
 
 // Vector implementations
 Vector::Vector(double x, double y) {
@@ -77,84 +79,46 @@ std::pair<Vector, Vector> System::getBounds() const {
     return {min_pos + padding * -1, max_pos + padding};
 }
 
-std::pair<int, int> System::worldToScreen(const Vector& pos, const Vector& min, const Vector& max, 
-                                        int width, int height) const {
-    double x_scale = width / (max.data[0] - min.data[0]);
-    double y_scale = height / (max.data[1] - min.data[1]);
-    
-    int screen_x = static_cast<int>((pos.data[0] - min.data[0]) * x_scale);
-    int screen_y = height - static_cast<int>((pos.data[1] - min.data[1]) * y_scale);
-    
-    return {screen_x, screen_y};
-}
-
-void System::writePPM(const std::string& filename, const std::vector<std::vector<uint8_t>>& image, 
-                     int width, int height) {
-    std::ofstream file(filename);
-    file << "P3\n" << width << " " << height << "\n255\n";
-    
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            uint8_t value = image[y][x];
-            // Convert grayscale to RGB
-            file << (int)value << " " << (int)value << " " << (int)value << " ";
-        }
-        file << "\n";
-    }
-}
-
 void System::visualize(const std::string& name) {
+    InitializeMagick(nullptr);
+    
     const int width = 800;
     const int height = 600;
-    auto [min_pos, max_pos] = getBounds();
+    std::vector<Image> frames;
     
-    // Create frames
-    for (size_t frame = 0; frame < telemetry.size(); ++frame) {
-        // Create a new white image
-        std::vector<std::vector<uint8_t>> image(height, std::vector<uint8_t>(width, 255));
+    // Find bounds
+    auto [min_pos, max_pos] = getBounds();
+    double min_x = min_pos.data[0];
+    double min_y = min_pos.data[1];
+    double max_x = max_pos.data[0];
+    double max_y = max_pos.data[1];
+    
+    // Create frames with memory management
+    size_t batch_size = 50; // Process frames in batches
+    for (size_t i = 0; i < telemetry.size(); i++) {
+        Image image(Geometry(width, height), Color("white"));
         
-        // Draw trajectory trails (previous positions)
-        for (size_t prev_frame = 0; prev_frame < frame; ++prev_frame) {
-            for (const auto& pos : telemetry[prev_frame]) {
-                auto [x, y] = worldToScreen(pos, min_pos, max_pos, width, height);
-                if (x >= 0 && x < width && y >= 0 && y < height) {
-                    image[y][x] = 200;  // Light gray for trails
-                }
-            }
+        // Draw points
+        for (const auto& pos : telemetry[i]) {
+            int x = static_cast<int>((pos.data[0] - min_x) / (max_x - min_x) * (width - 20) + 10);
+            int y = static_cast<int>(height - ((pos.data[1] - min_y) / (max_y - min_y) * (height - 20) + 10));
+            
+            // Draw a larger point
+            image.fillColor("blue");  // Set fill color
+            image.draw(DrawableCircle(x, y, x + 3, y + 3));  // Draw a small circle instead of a point
         }
         
-        // Draw current positions
-        for (const auto& pos : telemetry[frame]) {
-            auto [x, y] = worldToScreen(pos, min_pos, max_pos, width, height);
-            if (x >= 0 && x < width && y >= 0 && y < height) {
-                // Draw a larger point (3x3 pixels)
-                for (int dy = -1; dy <= 1; ++dy) {
-                    for (int dx = -1; dx <= 1; ++dx) {
-                        int px = x + dx;
-                        int py = y + dy;
-                        if (px >= 0 && px < width && py >= 0 && py < height) {
-                            image[py][px] = 0;  // Black for current position
-                        }
-                    }
-                }
-            }
-        }
+        image.animationDelay(10);  // Slow down animation slightly
+        frames.push_back(std::move(image));  // Use move semantics
         
-        // Save frame
-        std::string frame_filename = name + "_frame_" + 
-                                   std::to_string(frame) + ".ppm";
-        writePPM(frame_filename, image, width, height);
+        // Write in batches to manage memory
+        if (frames.size() >= batch_size || i == telemetry.size() - 1) {
+            writeImages(frames.begin(), frames.end(), name);
+            frames.clear();
+        }
     }
     
-    // Create a simple shell script to view frames in sequence
-    std::ofstream script("view_frames.sh");
-    script << "#!/bin/bash\n";
-    script << "for f in " << name << "_frame_*.ppm; do\n";
-    script << "    cat $f\n";
-    script << "    sleep 0.05\n";
-    script << "done\n";
-    script.close();
-    
-    // Make the script executable
-    system("chmod +x view_frames.sh");
+    // Resource cleanup
+    frames.clear();
+
 }
