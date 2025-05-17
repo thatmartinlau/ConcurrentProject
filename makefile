@@ -9,6 +9,7 @@ nbody:
 		src/core.cpp \
 		src/simplesimulation.cpp \
 		src/barneshutt.cpp \
+		src/particlemesh.cpp \
 		$(LDFLAGS) \
 		&& ./nbody_sim \
 		&& rm nbody_sim
