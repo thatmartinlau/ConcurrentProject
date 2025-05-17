@@ -2,6 +2,9 @@
 #include <cmath>
 #include <fstream>
 #include <Magick++.h>
+#include <string>
+#include <iostream>
+using std::string;
 using namespace Magick;
 
 // Vector implementations
@@ -24,10 +27,10 @@ void Vector::operator+=(const Vector& other) {
 }
 
 // Body implementations
-Body::Body() : m(0), coordinates(), velocity(), acceleration() {}
+Body::Body() : m(0), coordinates(), velocity(), acceleration(), color(""), size(0), title("") {}
 
-Body::Body(double mass, const Vector& pos, const Vector& vel) 
-    : m(mass), coordinates(pos), velocity(vel), acceleration() {}
+Body::Body(double mass, const Vector& pos, const Vector& vel, string color, int size, string title) 
+    : m(mass), coordinates(pos), velocity(vel), acceleration(), color(color), size(size), title(title) {}
 
 void Body::update(double dt) {
     velocity += acceleration * dt;
@@ -79,46 +82,99 @@ std::pair<Vector, Vector> System::getBounds() const {
     return {min_pos + padding * -1, max_pos + padding};
 }
 
-void System::visualize(const std::string& name) {
+void System::visualize(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
     
     const int width = 800;
     const int height = 600;
+    const int padding = 50;
     std::vector<Image> frames;
+    
+    // Define different colors for different bodies
+    std::vector<Color> colors = {
+        Color("yellow"),
+        Color("blue"),
+        Color("red"),
+        Color("green"),
+        Color("purple"),
+        Color("orange")
+    };
     
     // Find bounds
     auto [min_pos, max_pos] = getBounds();
-    double min_x = min_pos.data[0];
-    double min_y = min_pos.data[1];
-    double max_x = max_pos.data[0];
-    double max_y = max_pos.data[1];
     
-    // Create frames with memory management
-    size_t batch_size = 50; // Process frames in batches
+    // Create frames for each time step
     for (size_t i = 0; i < telemetry.size(); i++) {
-        Image image(Geometry(width, height), Color("white"));
-        
-        // Draw points
-        for (const auto& pos : telemetry[i]) {
-            int x = static_cast<int>((pos.data[0] - min_x) / (max_x - min_x) * (width - 20) + 10);
-            int y = static_cast<int>(height - ((pos.data[1] - min_y) / (max_y - min_y) * (height - 20) + 10));
+        Image image(Geometry(width, height), Color("black"));
+
+        if (axes) {
+            // Draw coordinate axes
+            image.strokeColor("gray");
+            image.draw(DrawableLine(padding, height-padding, width-padding, height-padding)); // X axis
+            image.draw(DrawableLine(padding, height-padding, padding, padding)); // Y axis
             
-            // Draw a larger point
-            image.fillColor("blue");  // Set fill color
-            image.draw(DrawableCircle(x, y, x + 3, y + 3));  // Draw a small circle instead of a point
+            // Draw scale markers
+            image.fillColor("white");
+            for(int j = 0; j <= 10; j++) {
+                int x = padding + j * (width - 2*padding) / 10;
+                int y = height - padding + 20;
+                std::string label = std::to_string(static_cast<int>(min_pos.data[0] + j * (max_pos.data[0] - min_pos.data[0]) / 10));
+                image.draw(DrawableText(x, y, label));
+            }
         }
         
-        image.animationDelay(10);  // Slow down animation slightly
-        frames.push_back(std::move(image));  // Use move semantics
         
-        // Write in batches to manage memory
-        if (frames.size() >= batch_size || i == telemetry.size() - 1) {
-            writeImages(frames.begin(), frames.end(), name);
-            frames.clear();
+        // For each body in the current frame
+        for (size_t body_idx = 0; body_idx < telemetry[i].size(); body_idx++) {
+            // Get color for this body
+            Color bodyColor = colors[body_idx % colors.size()];
+            Color trailColor = bodyColor;
+            trailColor.alpha(65535 * 0.3); // 30% opacity for trails
+            
+            // Draw trail for this body
+            if (i > 0) {
+                for (size_t j = 0; j < i; j++) {
+                    const auto& trail_pos = telemetry[j][body_idx];
+                    int trail_x = static_cast<int>((trail_pos.data[0] - min_pos.data[0]) / (max_pos.data[0] - min_pos.data[0]) 
+                            * (width - 2*padding) + padding);
+                    int trail_y = static_cast<int>(height - ((trail_pos.data[1] - min_pos.data[1]) / (max_pos.data[1] - min_pos.data[1]) 
+                            * (height - 2*padding) + padding));
+                    
+                    image.fillColor(trailColor);
+                    image.draw(DrawableCircle(trail_x, trail_y, trail_x + 2, trail_y + 2));
+                }
+            }
+            
+            // Draw current position for this body
+            const auto& pos = telemetry[i][body_idx];
+            int x = static_cast<int>((pos.data[0] - min_pos.data[0]) / (max_pos.data[0] - min_pos.data[0]) 
+                    * (width - 2*padding) + padding);
+            int y = static_cast<int>(height - ((pos.data[1] - min_pos.data[1]) / (max_pos.data[1] - min_pos.data[1]) 
+                    * (height - 2*padding) + padding));
+            
+            image.fillColor(bodyColor);
+            image.draw(DrawableCircle(x, y, x + 5, y + 5));
+
+            // Draw title for this body
+                image.fillColor("white");
+                // Position the title slightly above and to the right of the body
+                image.draw(DrawableText(x + 10, y - 10, bodies[body_idx].title));
         }
+        
+        // Add time information
+        if (time) {
+            double current_time = i * 0.1;
+            std::string timeInfo = "Time: " + std::to_string(current_time) + "s";
+            image.fillColor("white");
+            image.draw(DrawableText(padding, padding-20, timeInfo));
+        }
+        image.animationDelay(5);
+        frames.push_back(std::move(image));
+        
+        
     }
     
-    // Resource cleanup
+    // Write all frames at once
+    writeImages(frames.begin(), frames.end(), name);
     frames.clear();
-
 }
