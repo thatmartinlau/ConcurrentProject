@@ -12,6 +12,18 @@
 #include <cmath>
 
 int main() {
+    // Default choice of method
+    std::string method = "naive";
+
+    // Parse args for different methods
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        const std::string prefix = "-method=";
+        if (arg.rfind(prefix, 0) == 0) {
+            method = arg.substr(prefix.size());
+        }
+    }
+
     Magick::InitializeMagick(nullptr);
     MagickCore::SetMagickResourceLimit(MagickCore::AreaResource, 1024*1024*256);  // 256MB
     MagickCore::SetMagickResourceLimit(MagickCore::MemoryResource, 1024*1024*512);  // 512MB
@@ -38,8 +50,23 @@ int main() {
     universe.add(earth);
     universe.add(mars);
 
-    naive_simulation(universe, 0.001);
-    universe.visualize("naive_simulation.gif");
-    
+    // Dispatch to the appropriate simulation method
+    if (method == "naive") {
+        naive_simulation(universe, 0.001);
+    }
+    else if (method == "barneshut") {
+        BarnesHut(universe, 0.001);
+    }
+#ifdef USE_CUDA
+    else if (method == "gpu") {
+        simulateBruteForceGPU(universe, 0.001);
+    }
+#endif
+    else {
+        std::cerr << "Unknown method “" << method << "”\n";
+        return 1;
+    }
+
+    universe.visualize(method + "_simulation.gif");
     return 0;
 }

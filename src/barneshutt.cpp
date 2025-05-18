@@ -1,5 +1,11 @@
 #include "barneshutt.hpp"
+#include <algorithm>
+#include <limits>
+#include <cmath>
+#include <thread>
+#include <mutex>
 
-void BarnesHut(System &universe, double dt) {
-    // Implementation here
-}
+#ifdef USE_CUDA
+#include <cuda_runtime.h>
+#endif
+
