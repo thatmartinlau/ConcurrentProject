@@ -42,7 +42,7 @@ All executables accept a `-method=` flag to select the simulation algorithm:
 
 - `naive`    — simple \(O(N^2)\) CPU simulation
 - `barneshut`— Barnes–Hut \(O(N \log N)\) CPU simulation
-- `gpu`      — brute‑force \(O(N^2)\) GPU simulation (if built with `USE_CUDA`)
+- `barneshut_gpu`      — Barnes–Hut brute‑force \(O(N^2)\) GPU simulation (if built with `USE_CUDA`)
 
 ```bash
 # Naive CPU
@@ -51,8 +51,8 @@ All executables accept a `-method=` flag to select the simulation algorithm:
 # Barnes–Hut CPU
 ./nbody_cpu -method=barneshut
 
-# GPU brute‑force
-./nbody_gpu -method=gpu
+# Barnes–Hut GPU brute‑force
+./nbody_gpu -method=barneshut_gpu
 ```
 
 Each run will produce a GIF (e.g., `naive_simulation.gif`, `barneshut_simulation.gif`, or `gpu_simulation.gif`) in the working directory.
