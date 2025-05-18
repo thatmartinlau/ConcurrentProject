@@ -13,6 +13,8 @@ Vector::Vector(double x, double y) {
     data[1] = y;
 }
 
+    
+
 Vector Vector::operator+(const Vector& other) const {
     return Vector(data[0] + other.data[0], data[1] + other.data[1]);
 }
@@ -82,6 +84,11 @@ std::pair<Vector, Vector> System::getBounds() const {
     return {min_pos + padding * -1, max_pos + padding};
 }
 
+std::pair<Vector, Vector> System::exposeBounds() const{
+    return getBounds();
+} // to be able to get the bound
+
+
 void System::visualize(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
     
@@ -107,8 +114,12 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
     for (size_t i = 0; i < telemetry.size(); i++) {
         Image image(Geometry(width, height), Color("black"));
 
+        //just to debug
+        //std::cout << "telemetry.size(): " << telemetry.size() << ", i: " << i << std::endl;
+
         if (axes) {
             // Draw coordinate axes
+
             image.strokeColor("gray");
             image.draw(DrawableLine(padding, height-padding, width-padding, height-padding)); // X axis
             image.draw(DrawableLine(padding, height-padding, padding, padding)); // Y axis
@@ -128,7 +139,8 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
         for (size_t body_idx = 0; body_idx < telemetry[i].size(); body_idx++) {
             // Get color for this body
             Color bodyColor = colors[body_idx % colors.size()];
-            Color trailColor = bodyColor;
+            //Color trailColor = bodyColor; does not work with me
+            ColorRGB trailColor(bodyColor);
             trailColor.alpha(65535 * 0.3); // 30% opacity for trails
             
             // Draw trail for this body
@@ -170,8 +182,6 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
         }
         image.animationDelay(5);
         frames.push_back(std::move(image));
-        
-        
     }
     
     // Write all frames at once

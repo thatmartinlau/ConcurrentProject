@@ -1,5 +1,6 @@
 #include "src/core.hpp"
 #include "src/simplesimulation.hpp"
+#include "src/particlemesh.hpp"
 #include "src/barneshutt.hpp"
 
 #ifndef M_PI

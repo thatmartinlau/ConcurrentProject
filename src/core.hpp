@@ -45,10 +45,12 @@ class Body {
 class System {
     public:
         std::vector<Body> bodies;
-        std::vector<std::vector<Vector>> telemetry;
+        std::vector<std::vector<Vector> > telemetry;
 
         void add(Body body);
         void visualize(const std::string& name, bool time, bool axes);
+        std::pair<Vector, Vector> exposeBounds() const; // to be able to get the bound
+    
     private:
         std::pair<Vector, Vector> getBounds() const;
         std::pair<int, int> worldToScreen(const Vector& pos, const Vector& min, const Vector& max, int width, int height) const;

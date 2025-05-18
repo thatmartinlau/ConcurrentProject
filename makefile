@@ -6,6 +6,7 @@ LDFLAGS = $(shell pkg-config --libs Magick++)
 nbody: 
 	$(CXX) $(CXXFLAGS) -o nbody_sim \
 		main.cpp \
+		mainparticlemesh.cpp \
 		src/core.cpp \
 		src/simplesimulation.cpp \
 		src/barneshutt.cpp \
