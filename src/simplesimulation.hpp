@@ -3,6 +3,6 @@
 
 #include "core.hpp"
 
-void naive_simulation(System &universe, double dt);
+void naive_simulation(System &universe);
 
 #endif

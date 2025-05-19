@@ -95,6 +95,6 @@ int main() {
         }
     }
     
-    universe.visualize("out2.gif", true, true);
+    universe.visualize("telemetry_test.gif", true, true);
     return 0;
 }

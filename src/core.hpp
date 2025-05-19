@@ -6,7 +6,7 @@
 #include <Magick++.h>
 using std::string; 
 
-#define STEP_COUNT 500
+#define STEP_COUNT 256
 #define G 6.67430e-11
 
 // Vector class
@@ -17,6 +17,9 @@ class Vector {
 
         Vector operator+(const Vector& other) const;
         Vector operator*(double scalar) const;
+        Vector operator-(const Vector& other) const;
+        Vector operator/(double scalar) const;
+        Vector& operator=(const Vector& other);
         void operator+=(const Vector& other);
         double& operator[](int i) { return data[i]; }
         const double& operator[](int i) const { return data[i]; }
@@ -44,6 +47,7 @@ class Body {
 // System class
 class System {
     public:
+        double dt;
         std::vector<Body> bodies;
         std::vector<std::vector<Vector> > telemetry;
 

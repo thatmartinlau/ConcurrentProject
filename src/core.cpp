@@ -4,6 +4,8 @@
 #include <Magick++.h>
 #include <string>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 using std::string;
 using namespace Magick;
 
@@ -19,9 +21,24 @@ Vector Vector::operator+(const Vector& other) const {
     return Vector(data[0] + other.data[0], data[1] + other.data[1]);
 }
 
+Vector Vector::operator-(const Vector& other) const {
+    return Vector(data[0] - other.data[0], data[1] - other.data[1]);
+}
+
 Vector Vector::operator*(double scalar) const {
     return Vector(data[0] * scalar, data[1] * scalar);
 }
+
+Vector Vector::operator/(double scalar) const {
+    return Vector(data[0]/scalar, data[1]/scalar);
+}
+
+Vector& Vector::operator=(const Vector& other) {
+    data[0] = other.data[0];
+    data[1] = other.data[1];
+    return *this;
+}
+
 
 void Vector::operator+=(const Vector& other) {
     data[0] += other.data[0];
@@ -35,10 +52,15 @@ Body::Body(double mass, const Vector& pos, const Vector& vel, string color, int 
     : m(mass), coordinates(pos), velocity(vel), acceleration(), color(color), size(size), title(title) {}
 
 void Body::update(double dt) {
-    velocity += acceleration * dt;
-    coordinates += velocity * dt;
-    acceleration = Vector(0, 0);
+    // Update position first
+    coordinates.data[0] += velocity.data[0] * dt + 0.5 * acceleration.data[0] * dt * dt;
+    coordinates.data[1] += velocity.data[1] * dt + 0.5 * acceleration.data[1] * dt * dt;
+    
+    // Then update velocity
+    velocity.data[0] += acceleration.data[0] * dt;
+    velocity.data[1] += acceleration.data[1] * dt;
 }
+
 
 // System implementations
 void System::add(Body body) {
@@ -56,11 +78,20 @@ Vector force(Body bi, Body bj) {
     double x2 = bj.coordinates.data[0];
     double y2 = bj.coordinates.data[1]; 
 
-    double dx = x2-x1;
-    double dy = y2-y1;
-    double magnitude = G * (bi.m * bj.m) / (sqr(dx) + sqr(dy));
-    double dist = sqrt(sqr(dx) + sqr(dy));
-    return Vector(magnitude*dx/dist, magnitude*dy/dist);
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+    double dist = sqrt(sqr(dx) + sqr(dy));  // Calculate distance once
+    
+    // Avoid division by zero
+    if (dist < 1e-10) {
+        return Vector(0, 0);
+    }
+    
+    // F = G * m1 * m2 / r^2
+    double magnitude = G * (bi.m * bj.m) / sqr(dist);  // Use dist² not (dx² + dy²)
+    
+    // Convert to vector components using direction cosines
+    return Vector(magnitude * dx/dist, magnitude * dy/dist);
 }
 
 
@@ -88,15 +119,13 @@ std::pair<Vector, Vector> System::exposeBounds() const{
     return getBounds();
 } // to be able to get the bound
 
-
 void System::visualize(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
-    
     const int width = 800;
     const int height = 600;
     const int padding = 50;
     std::vector<Image> frames;
-    
+
     // Define different colors for different bodies
     std::vector<Color> colors = {
         Color("yellow"),
@@ -106,12 +135,15 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
         Color("purple"),
         Color("orange")
     };
-    
+
     // Find bounds
     auto [min_pos, max_pos] = getBounds();
-    
+
     // Create frames for each time step
     for (size_t i = 0; i < telemetry.size(); i++) {
+        // Progress bar
+        std::cout << i << " " << std::flush;
+
         Image image(Geometry(width, height), Color("black"));
 
         //just to debug
@@ -152,7 +184,7 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
                     int trail_y = static_cast<int>(height - ((trail_pos.data[1] - min_pos.data[1]) / (max_pos.data[1] - min_pos.data[1]) 
                             * (height - 2*padding) + padding));
                     
-                    image.fillColor(trailColor);
+                    image.fillColor(bodyColor);
                     image.draw(DrawableCircle(trail_x, trail_y, trail_x + 2, trail_y + 2));
                 }
             }
@@ -175,16 +207,20 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
         
         // Add time information
         if (time) {
-            double current_time = i * 0.1;
+            double current_time = i * dt;
             std::string timeInfo = "Time: " + std::to_string(current_time) + "s";
             image.fillColor("white");
             image.draw(DrawableText(padding, padding-20, timeInfo));
         }
         image.animationDelay(5);
         frames.push_back(std::move(image));
+        
+    // Image frame creation end
     }
-    
+    std::cout << "\nImages generated. Now writing to file...\n";
+
     // Write all frames at once
     writeImages(frames.begin(), frames.end(), name);
     frames.clear();
+    std::cout << "File written.\n";
 }

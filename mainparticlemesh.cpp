@@ -1,6 +1,6 @@
 
-#include "core.hpp"
-#include "particlemesh.hpp"
+#include "src/core.hpp"
+#include "src/particlemesh.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323
