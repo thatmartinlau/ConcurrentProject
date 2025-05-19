@@ -1,6 +1,8 @@
 
-#include "core.hpp"
-#include "particlemesh.hpp"
+#include "src/core.hpp"
+#include "src/particlemesh.hpp"
+#include "src/partickemesh.hpp"
+#include "src/particlemeshcuda.cpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323
@@ -23,12 +25,12 @@ int main() {
     // Run the particle mesh simulation
     double dt = 0.1;
     int grid_size = 100;
-    particle_mesh_simulation(universe, dt, grid_size);
+    particle_mesh_simulation_CUDA(universe, dt, grid_size, 3);
 
     std::cout << "Vizualization going to start" << std::endl;
 
     // Visualize the simulation and store it in a GIF file
-    universe.visualize("simulation2.gif", true, true);
+    //universe.visualize("simulation2.gif", true, true);
 
     std::cout << "Simulation completed and stored in simulation.gif" << std::endl;
 
