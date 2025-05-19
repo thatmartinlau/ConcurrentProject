@@ -140,4 +140,4 @@ void particle_mesh_simulation_CUDA(System &universe, double dt, int grid_size, i
     cudaFree(d_grid);
     cudaFree(d_freq_data);
     cudaFree(d_bodies);
-}
+}   

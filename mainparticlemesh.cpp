@@ -1,7 +1,7 @@
 #include "src/core.hpp"
 #include "src/particlemesh.hpp"
 #include "src/particlemesh.hpp"
-#include "src/particlemeshcuda.hpp"
+//#include "src/particlemeshcuda.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323
@@ -11,6 +11,31 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <fstream>
+#include <string>
+
+// Function to export telemetry data to a CSV file
+void export_telemetry_to_csv(const System &universe, const std::string &filename) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open " << filename << " for writing.\n";
+        return;
+    }
+
+    // Write header
+    file << "step,body,x,y\n";
+
+    for (size_t step = 0; step < universe.telemetry.size(); ++step) {
+        const auto &positions = universe.telemetry[step];
+        for (size_t i = 0; i < positions.size(); ++i) {
+            file << step << "," << i << "," << positions[i].data[0] << "," << positions[i].data[1] << "\n";
+        }
+    }
+
+    file.close();
+    std::cout << "Telemetry data exported to " << filename << std::endl;
+}
+
 
 int main() {
     // Create a system
@@ -24,14 +49,19 @@ int main() {
     // Run the particle mesh simulation
     double dt = 0.1;
     int grid_size = 100;
-    particle_mesh_simulation(universe, dt, grid_size, 3);
+    particle_mesh_simulation(universe, dt, grid_size);
 
-    std::cout << "Vizualization going to start" << std::endl;
+    export_telemetry_to_csv(universe, "telemetry.csv");
+
+
+
+    //std::cout << "Vizualization going to start" << std::endl;
 
     // Visualize the simulation and store it in a GIF file
-    //universe.visualize("simulation2.gif", true, true);
+    //universe.visualize("simulation_particle_mesh.gif", true, true);
 
-    std::cout << "Simulation completed and stored in simulation.gif" << std::endl;
+
+    std::cout << "Simulation completed and stored in simulation_particle_mesh.gif" << std::endl;
 
     return 0;
 }
