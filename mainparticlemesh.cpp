@@ -1,8 +1,8 @@
 
 #include "src/core.hpp"
 #include "src/particlemesh.hpp"
-#include "src/partickemesh.hpp"
-#include "src/particlemeshcuda.cpp"
+#include "src/particlemesh.hpp"
+#include "src/particlemeshcuda.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323
@@ -25,7 +25,7 @@ int main() {
     // Run the particle mesh simulation
     double dt = 0.1;
     int grid_size = 100;
-    particle_mesh_simulation_CUDA(universe, dt, grid_size, 3);
+    particle_mesh_simulation(universe, dt, grid_size, 3);
 
     std::cout << "Vizualization going to start" << std::endl;
 
