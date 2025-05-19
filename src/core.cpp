@@ -147,7 +147,7 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
         Image image(Geometry(width, height), Color("black"));
 
         //just to debug
-        std::cout << "telemetry.size(): " << telemetry.size() << ", i: " << i << std::endl;
+        // std::cout << "telemetry.size(): " << telemetry.size() << ", i: " << i << std::endl;
 
         if (axes) {
             // Draw coordinate axes

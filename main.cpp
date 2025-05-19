@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     auto time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     // For testing purposes
-    bool print_telemetry = true;
+    bool print_telemetry = false;
     if (print_telemetry) {
         for (size_t i = 0; i < universe.telemetry.size(); i += 1) {
             std::cout << "Frame: " << i << ", Time: " << i*universe.dt << "s\n";
