@@ -147,7 +147,7 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
         Image image(Geometry(width, height), Color("black"));
 
         //just to debug
-        //std::cout << "telemetry.size(): " << telemetry.size() << ", i: " << i << std::endl;
+        std::cout << "telemetry.size(): " << telemetry.size() << ", i: " << i << std::endl;
 
         if (axes) {
             // Draw coordinate axes
@@ -171,8 +171,8 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
         for (size_t body_idx = 0; body_idx < telemetry[i].size(); body_idx++) {
             // Get color for this body
             Color bodyColor = colors[body_idx % colors.size()];
-            //Color trailColor = bodyColor; does not work with me
-            ColorRGB trailColor(bodyColor);
+            Color trailColor = bodyColor; //does not work with me
+            //ColorRGB trailColor(bodyColor); For Oscar when running on his local computer
             trailColor.alpha(65535 * 0.3); // 30% opacity for trails
             
             // Draw trail for this body

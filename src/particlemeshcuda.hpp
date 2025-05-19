@@ -6,8 +6,6 @@
 #include <cmath>
 #include <algorithm>
 #include <iostream>
-#include <fftw3.h>
-#include <cufft.h>
 
 
 void particle_mesh_simulation_CUDA(System &universe, double dt, int grid_size, int num_bodies);

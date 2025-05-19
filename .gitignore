@@ -33,3 +33,6 @@
 
 # TeX stuff
 *.synctex.gz
+
+*.gif
+*telemetry.csv
