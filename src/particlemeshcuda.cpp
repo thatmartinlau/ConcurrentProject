@@ -6,10 +6,6 @@
 #include <fftw3.h>
 #include <cufft.h>
 
-
-
-
-
 __global__ void assign_mass_to_grid(Body* bodies, double* grid, int num_bodies, int grid_size, double min_x, double min_y, double cell_size) {
 int i = blockIdx.x * blockDim.x + threadIdx.x;
 if (i >= num_bodies) return;
