@@ -50,6 +50,7 @@ Below is a general view of our project repository file structure.
             .3 barneshutt.cpp/hpp.
             .3 particlemesh.cpp/hpp.
             .3 particlemeshcuda.cpp/hpp.
+            .3 particlemeshthread.cpp/hpp
         .2 py \dotfill Python testing code.
             .3 verifier.py.
         .2 makefile \dotfill Project builder. 
@@ -65,7 +66,7 @@ The work has been split as follows. The arrangement is not defining, as we like 
 \begin{enumerate}
     \item Martin handles general project structure, core classes, visualization, and the naive and its optimized algorithm implementation.
     \item Ziyue handles the Barnes Hutt algorithm.
-    \item Oscar handles the Particle Mesh algorithm implementation.
+    \item Oscar handles the Particle Mesh algorithm implementation (simple, thread based and cuda implementation)
 \end{enumerate}
 
 
@@ -129,9 +130,65 @@ So far, we have a basic implementation of the naive algorithm without multi thre
 
 Other aspects (parallelizing the update steps, parallelizing forces computations, avoiding race conditions) will be implemented later on.
 
-
 \section{Particle Mesh based algorithm}
+Currently I have implemented all three implementation of simple particlemesh method, thread based and cuda. I could only test the simple version as I had problems to run CUDA on my MacOS operating system. Particlemesh has currently some problems for simulating the solar system but it worked on simple example of 3-body simulation. 
+\begin{algorithm}[H]
+\caption{Particle Mesh Simulation (Sequential)}\label{alg:partmesh}
+\begin{algorithmic}[1]
+\Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
+\Require Time step $\Delta t$, number of steps $N$, grid size $G$
+\State telemetry $\gets \emptyset$
+\State telemetry.append(initial positions)
+\State Compute bounding box: $(\min \vec{r}, \max \vec{r})$
+\State Expand bounds with padding proportional to domain size
+\State Compute cell size: $h \gets \frac{\max_x - \min_x}{G}$
+\State Initialize mass grid $M[G][G] \gets 0$
+\State Initialize potential grid $\Phi[G][G] \gets 0$
+\State Compute initial half-step velocities: $\vec{v}_i^{n+1/2} = \vec{v}_i + \frac{\Delta t}{2} \vec{a}_i$
+\State Prepare FFTW input/output buffers and plans
+\For{each step $n = 1$ to $N$}
+    \State Clear mass grid $M$
+    
+    \For{each body $i$ in system}
+        \State Determine grid cell $(x, y)$ from $\vec{r}_i$
+        \State Accumulate mass: $M[x][y] \mathrel{+}= m_i$
+    \EndFor
 
+    \State Perform forward FFT on $M$ to get $\tilde{M}$
+    
+    \For{each frequency component $(k_x, k_y)$}
+        \State Compute $k^2 = k_x^2 + k_y^2$
+        \If{$k^2 > 0$}
+            \State $\tilde{\Phi}[k_x][k_y] \gets -G \cdot \tilde{M}[k_x][k_y] / k^2$
+        \Else
+            \State $\tilde{\Phi}[k_x][k_y] \gets 0$
+        \EndIf
+    \EndFor
+
+    \State Perform inverse FFT on $\tilde{\Phi}$ to get $\Phi$
+
+    \For{each body $i$}
+        \State Determine grid cell $(x, y)$ from $\vec{r}_i$
+        \If{cell is interior}
+            \State Compute acceleration using central finite difference on $\Phi$:
+            \State $\vec{a}_i = -\nabla \Phi(x, y)$
+        \Else
+            \State $\vec{a}_i \gets (0, 0)$
+        \EndIf
+    \EndFor
+
+    \For{each body $i$}
+        \State Update half-step velocity: $\vec{v}_i^{n+1/2} \mathrel{+}= \frac{\Delta t}{2} \vec{a}_i$
+        \State Set current velocity: $\vec{v}_i \gets \vec{v}_i^{n+1/2}$
+        \State Update position: $\vec{r}_i \mathrel{+}= \vec{v}_i^{n+1/2} \cdot \Delta t$
+    \EndFor
+
+    \State Save current positions to telemetry
+\EndFor
+
+\State Cleanup FFTW resources
+\end{algorithmic}
+\end{algorithm}
 \section{Barnes Hutt algorithm}
 
 
