@@ -1,6 +1,7 @@
 #include "src/core.hpp"
 #include "src/simplesimulation.hpp"
 #include "src/barneshutt.hpp"
+#include "src/particlemesh.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323
@@ -17,7 +18,6 @@
 int main(int argc, char** argv) {
     // Default choice of method
     std::string method = "naive";
-
     // Parse args for different methods
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -84,6 +84,10 @@ int main(int argc, char** argv) {
     }
     else if (method == "barneshut") {
         // BarnesHut(universe, DT);
+    }
+    else if (method == "particlemesh"){
+        int grid_size = 100; // added this 
+        particle_mesh_simulation(universe, dt,grid_size);
     }
     #ifdef USE_CUDA
     else if (method == "gpu") {
