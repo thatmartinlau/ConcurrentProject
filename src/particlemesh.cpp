@@ -1,4 +1,3 @@
-
 #include "core.hpp"
 #include <vector>
 #include <cmath>
@@ -11,41 +10,50 @@
 
 #define DEBUG true
 
-
 void particle_mesh_simulation(System &universe, double dt, int grid_size) {
     universe.telemetry.clear();
 
-    // Define the grid
+    std::vector<Vector> initial_positions;
+    for (const auto& body : universe.bodies) {
+        initial_positions.push_back(body.coordinates);
+    }
+
+    // Dynamic bounds based on initial body positions
     auto [min_pos, max_pos] = universe.exposeBounds();
+    double padding = 0.1 * (max_pos - min_pos).norm();
+    min_pos = min_pos - Vector(padding, padding);
+    max_pos = max_pos + Vector(padding, padding);
+
     double cell_size = (max_pos.data[0] - min_pos.data[0]) / grid_size;
 
-    // Initialize the grid
     std::vector<std::vector<double>> grid(grid_size, std::vector<double>(grid_size, 0.0));
     std::vector<std::vector<double>> potential(grid_size, std::vector<double>(grid_size, 0.0));
 
-    // FFTW setup
+    std::vector<Vector> half_step_velocities;
+    for (auto &body : universe.bodies) {
+        Vector v_half = body.velocity + body.acceleration * (0.5 * dt);
+        half_step_velocities.push_back(v_half);
+    }
+
     fftw_complex *in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * grid_size * grid_size);
     fftw_complex *out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * grid_size * grid_size);
     fftw_plan forward_plan = fftw_plan_dft_2d(grid_size, grid_size, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
     fftw_plan backward_plan = fftw_plan_dft_2d(grid_size, grid_size, out, in, FFTW_BACKWARD, FFTW_ESTIMATE);
 
     for (int step = 0; step < STEP_COUNT; ++step) {
-        // Reset grid
-        for (auto &row : grid) {
-            std::fill(row.begin(), row.end(), 0.0);
-        }
+        for (auto &row : grid) std::fill(row.begin(), row.end(), 0.0);
 
-        // Assign masses to the grid
         for (const auto &body : universe.bodies) {
             int grid_x = static_cast<int>((body.coordinates.data[0] - min_pos.data[0]) / cell_size);
             int grid_y = static_cast<int>((body.coordinates.data[1] - min_pos.data[1]) / cell_size);
 
             if (grid_x >= 0 && grid_x < grid_size && grid_y >= 0 && grid_y < grid_size) {
                 grid[grid_x][grid_y] += body.m;
+            } else if (DEBUG) {
+                std::cerr << "Body " << body.title << " is out of bounds at step " << step << "\n";
             }
         }
 
-        // Solve Poisson's equation using FFT
         for (int i = 0; i < grid_size; ++i) {
             for (int j = 0; j < grid_size; ++j) {
                 in[i * grid_size + j][0] = grid[i][j];
@@ -82,48 +90,39 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size) {
             }
         }
 
-        // Calculate forces from potential
         for (auto &body : universe.bodies) {
             int grid_x = static_cast<int>((body.coordinates.data[0] - min_pos.data[0]) / cell_size);
             int grid_y = static_cast<int>((body.coordinates.data[1] - min_pos.data[1]) / cell_size);
 
-            std::cout << "body: " << body.coordinates.data[0] << "\n";
-            std::cout << "body: " << body.coordinates.data[1] << "\n";
-
-
-            if (grid_x >= 0 && grid_x < grid_size && grid_y >= 0 && grid_y < grid_size) {
-                // Calculate gradient of potential (force)
-                double fx = 0.0, fy = 0.0;
-                if (grid_x > 0 && grid_x < grid_size - 1) {
-                    fx = -(potential[grid_x + 1][grid_y] - potential[grid_x - 1][grid_y]) / (2.0 * cell_size);
-                }
-                if (grid_y > 0 && grid_y < grid_size - 1) {
-                    fy = -(potential[grid_x][grid_y + 1] - potential[grid_x][grid_y - 1]) / (2.0 * cell_size);
-                }
-                body.acceleration.data[0] = fx;
-                body.acceleration.data[1] = fy;
+            if (grid_x >= 1 && grid_x < grid_size - 1 && grid_y >= 1 && grid_y < grid_size - 1) {
+                double fx = -(potential[grid_x + 1][grid_y] - potential[grid_x - 1][grid_y]) / (2.0 * cell_size);
+                double fy = -(potential[grid_x][grid_y + 1] - potential[grid_x][grid_y - 1]) / (2.0 * cell_size);
+                body.acceleration = Vector(fx, fy);
+            } else {
+                body.acceleration = Vector(0.0, 0.0);
             }
         }
 
-        // Update positions
+        for (size_t i = 0; i < universe.bodies.size(); ++i) {
+            auto &body = universe.bodies[i];
+            half_step_velocities[i] += body.acceleration * (0.5 * dt);
+            body.velocity = half_step_velocities[i];
+        }
+
         std::vector<Vector> positions;
-        for (auto &body : universe.bodies) {
-            body.update(dt);
+        for (size_t i = 0; i < universe.bodies.size(); ++i) {
+            auto &body = universe.bodies[i];
+            body.coordinates += half_step_velocities[i] * dt;
             positions.push_back(body.coordinates);
         }
         universe.telemetry.push_back(positions);
 
         if (DEBUG) {
-            std::cout << "cell_size:" << cell_size << "\n";
-            std::cout << "Step:" << step << "\n";
-            for (const auto& body : universe.bodies) {
-                std::cout << universe.dt << "    Body " << body.title
-                          << " velocity: (" << body.velocity.data[0]
-                          << ", " << body.velocity.data[1] << ")"
-                          << " acceleration: (" << body.acceleration.data[0]
-                          << ", " << body.acceleration.data[1] << ")"
-                          << "    Position: (" << body.coordinates.data[0]
-                          << ", " << body.coordinates.data[1] << ")\n";
+            std::cout << "cell_size: " << cell_size << "\nStep: " << step << "\n";
+            for (const auto &body : universe.bodies) {
+                std::cout << "Body " << body.title << " Pos: (" << body.coordinates.data[0] << ", " << body.coordinates.data[1]
+                          << ") Vel: (" << body.velocity.data[0] << ", " << body.velocity.data[1]
+                          << ") Acc: (" << body.acceleration.data[0] << ", " << body.acceleration.data[1] << ")\n";
             }
         }
     }

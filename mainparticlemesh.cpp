@@ -2,6 +2,7 @@
 #include "src/simplesimulation.hpp"
 #include "src/barneshutt.hpp"
 #include "src/particlemesh.hpp"
+#include "src/particlemesh_thread.hpp"
 
 
 #ifndef M_PI
@@ -80,7 +81,7 @@ int main(int argc, char** argv) {
     
 
 
-    double dt = 3.154e+7/150;
+    double dt = 3.154e+7/500;
     //double dt = 0.1;
     universe.dt = dt;
 
@@ -93,7 +94,7 @@ int main(int argc, char** argv) {
         // BarnesHut(universe, DT);
     }
     else if (method == "particlemesh"){
-        int grid_size = 1000; 
+        int grid_size = 1024; 
         particle_mesh_simulation(universe, dt,grid_size);
     }
     #ifdef USE_CUDA
