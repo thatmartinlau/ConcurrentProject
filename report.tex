@@ -189,7 +189,97 @@ Currently I have implemented all three implementation of simple particlemesh met
 \State Cleanup FFTW resources
 \end{algorithmic}
 \end{algorithm}
-\section{Barnes Hutt algorithm}
+\section{Barnes–Hut Algorithm}
+
+The Barnes–Hut algorithm reduces the complexity of the classical \(O(N^2)\) N-body force computation to approximately \(O(N\log N)\) by hierarchically clustering distant bodies.  Our implementation follows these main stages:
+
+\begin{algorithm}[H]
+    \caption{Barnes–Hut Simulation Outline}\label{alg:bh}
+    \begin{algorithmic}[1]
+        \Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
+        \Require Time step $\Delta t$, number of steps $N$, opening angle $\theta$
+        \State telemetry $\gets \emptyset$
+        \State telemetry.append(initial positions)
+        \For{step $\gets 0$ \textbf{to} $N-1$}
+            \State $[\texttt{minB},\texttt{maxB}] \gets \texttt{computeBounds}(\texttt{universe})$
+            \State $\texttt{root} \gets \texttt{createRootNode}([\texttt{minB},\texttt{maxB}])$
+            \For{each body $b_i$}
+                \State $\texttt{insertBody}(\texttt{root}, b_i)$
+            \EndFor
+            \State $\texttt{computeMassDistribution}(\texttt{root})$
+            \For{each body $b_i$}
+                \State $\vec{a}_i \gets \texttt{forceOnBody}(b_i,\texttt{root},\theta)/m_i$
+            \EndFor
+            \State $\texttt{updateBodies}(\texttt{universe}, \Delta t)$
+            \State $\texttt{freeQuadTree}(\texttt{root})$
+            \State telemetry.append(current positions)
+        \EndFor
+        \Ensure Position history for all bodies stored in telemetry
+    \end{algorithmic}
+\end{algorithm}
+
+\begin{enumerate}
+  \item \textbf{Compute Simulation Bounds.}  
+    We first call
+    \begin{itemize}
+      \item \texttt{computeBounds(const System\&)}  
+        to find an axis-aligned square enclosing all bodies (with a small padding).
+    \end{itemize}
+
+  \item \textbf{Quadtree Construction.}  
+    We represent space by a pointer-based quadtree of \texttt{QuadNode} objects:
+    \begin{itemize}
+      \item \texttt{createRootNode(const Bounds\&)} allocates the root covering the full region.  
+      \item \texttt{insertBody(QuadNode *, Body\&)} recursively subdivides nodes so that each leaf contains at most one body.
+    \end{itemize}
+
+  \item \textbf{Mass–Center Distribution.}  
+    A post-order traversal aggregates mass and center-of-mass at every internal node:
+    \begin{itemize}
+      \item \texttt{computeMassDistribution(QuadNode *)} computes \(\texttt{totalMass}\) and \(\texttt{centerOfMass}\).
+    \end{itemize}
+
+  \item \textbf{Force Computation.}  
+    For each body \(b_i\), we traverse the tree and apply the opening-angle criterion \(\theta\):
+    \begin{itemize}
+      \item \texttt{forceOnBody(const Body\&, QuadNode\*, double theta)}  
+        approximates distant clusters as single masses, or recurses into children when closer.
+    \end{itemize}
+
+  \item \textbf{Parallelization (Shared-Memory).}  
+    To exploit multicore CPUs, we compute forces in parallel:
+    \begin{itemize}
+      \item \texttt{computeForcesParallel(System\&, QuadNode\*, double theta)}  
+        spawns a pool of \texttt{std::thread}s, partitions the bodies into chunks, and each thread calls \texttt{forceOnBody} on its subset.  
+      \item Accelerations are stored per-thread and then written back, avoiding fine-grained locks.
+    \end{itemize}
+
+  \item \textbf{Time Integration.}  
+    Once all accelerations are known, we update velocities and positions in one pass:
+    \begin{itemize}
+      \item \texttt{updateBodies(System\&, double dt)} applies
+      \[
+        \mathbf{v} \gets \mathbf{v} + \mathbf{a}\,\Delta t,\quad
+        \mathbf{x} \gets \mathbf{x} + \mathbf{v}\,\Delta t.
+      \]
+    \end{itemize}
+
+  \item \textbf{Cleanup.}  
+    The quadtree is deallocated to avoid memory leaks:
+    \begin{itemize}
+      \item \texttt{freeQuadTree(QuadNode *)} recursively \texttt{delete}s all nodes.
+    \end{itemize}
+\end{enumerate}
+
+\subsection*{Concurrency Aspects}
+
+\begin{itemize}
+  \item \textbf{Multithreading in C++:} we illustrate basic shared-memory concurrency by partitioning the force computation across threads.  This uses standard \texttt{std::thread} and per-thread buffers, avoiding complex locking.
+  \item \textbf{Concurrent Data Structures:} insertion into the quadtree could be parallelized by feeding bodies into a thread-safe queue; our current version remains serial for clarity but is structured to allow a concurrent \texttt{insertBody} using a mutex per node or a lock-free pointer array.
+  \item \textbf{GPU / PRAM Illustration (Optional):} under \texttt{USE\_CUDA}, we provide \\ \texttt{simulateBruteForceGPU(System\&,double)} which launches an \(O(N^2)\) CUDA kernel.  Each GPU thread computes one body’s net force, demonstrating the PRAM model in practice.
+  \item \textbf{Correctness \& Testing:} we compare parallel results to a single‐threaded reference on small \(N\), and use tools like ThreadSanitizer to detect data races.  Telemetry outputs (positions over time) are also verified for physical invariants (e.g.\ center-of-mass motion).
+\end{itemize}
+
 
 
 \end{document}
