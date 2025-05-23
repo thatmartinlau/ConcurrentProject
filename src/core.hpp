@@ -6,7 +6,7 @@
 #include <Magick++.h>
 using std::string; 
 
-#define STEP_COUNT 256
+#define STEP_COUNT 25000
 #define G 6.67430e-11
 
 // Vector class
@@ -23,6 +23,7 @@ class Vector {
         void operator+=(const Vector& other);
         double& operator[](int i) { return data[i]; }
         const double& operator[](int i) const { return data[i]; }
+        double norm();
 };
 
 // Body class

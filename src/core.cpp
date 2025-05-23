@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <iomanip>
+#include <chrono>
 #include <sstream>
 using std::string;
 using namespace Magick;
@@ -44,6 +45,11 @@ void Vector::operator+=(const Vector& other) {
     data[0] += other.data[0];
     data[1] += other.data[1];
 }
+
+double Vector::norm() {
+    return sqrt(data[0]*data[0] + data[1] + data[1]);
+}
+
 
 // Body implementations
 Body::Body() : m(0), coordinates(), velocity(), acceleration(), color(""), size(0), title("") {}
@@ -122,9 +128,9 @@ std::pair<Vector, Vector> System::exposeBounds() const{
 
 void System::visualize(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
-    const int width = 800;
-    const int height = 600;
-    const int padding = 50;
+    const int width = 600;
+    const int height = 400;
+    const int padding = 25;
     std::vector<Image> frames;
 
     // Define different colors for different bodies
@@ -141,14 +147,12 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
     auto [min_pos, max_pos] = getBounds();
 
     // Create frames for each time step
-    for (size_t i = 0; i < telemetry.size(); i++) {
-        // Progress bar
+    for (size_t i = 0; i < telemetry.size(); i+=50) {
+        // Progress bar; this is mainly for debug purposes
         std::cout << i << " " << std::flush;
 
         Image image(Geometry(width, height), Color("black"));
 
-        //just to debug
-        std::cout << "telemetry.size(): " << telemetry.size() << ", i: " << i << std::endl;
 
         if (axes) {
             // Draw coordinate axes
@@ -157,7 +161,9 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
             image.draw(DrawableLine(padding, height-padding, width-padding, height-padding)); // X axis
             image.draw(DrawableLine(padding, height-padding, padding, padding)); // Y axis
             
-            // Draw scale markers
+            // Draw scale markers, this part will be commented out since this doesn't really add much to our image.
+            
+            /*
             image.fillColor("white");
             for(int j = 0; j <= 10; j++) {
                 int x = padding + j * (width - 2*padding) / 10;
@@ -165,10 +171,11 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
                 std::string label = std::to_string(static_cast<int>(min_pos.data[0] + j * (max_pos.data[0] - min_pos.data[0]) / 10));
                 image.draw(DrawableText(x, y, label));
             }
+            */
         }
         
         
-        // For each body in the current frame
+        // For each body in the current frame, we draw its position on the image.
         for (size_t body_idx = 0; body_idx < telemetry[i].size(); body_idx++) {
             // Get color for this body
             Color bodyColor = colors[body_idx % colors.size()];
@@ -177,6 +184,7 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
             trailColor.alpha(65535 * 0.3); // 30% opacity for trails
             
             // Draw trail for this body
+            /*
             if (i > 0) {
                 for (size_t j = 0; j < i; j++) {
                     const auto& trail_pos = telemetry[j][body_idx];
@@ -189,6 +197,8 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
                     image.draw(DrawableCircle(trail_x, trail_y, trail_x + 2, trail_y + 2));
                 }
             }
+            */
+            
             
             // Draw current position for this body
             const auto& pos = telemetry[i][body_idx];
@@ -221,7 +231,11 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
     std::cout << "\nImages generated. Now writing to file...\n";
 
     // Write all frames at once
+    auto start = std::chrono::high_resolution_clock::now();
     writeImages(frames.begin(), frames.end(), name);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Image Writing time: " << time_taken.count() << " milliseconds.";
     frames.clear();
     std::cout << "File written.\n";
 }
