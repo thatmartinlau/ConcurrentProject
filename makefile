@@ -39,5 +39,5 @@ telemetry:
 .PHONY: clean
 
 clean:
-	rm -f nbody_sim *.gif telemetry
+	rm -f nbody_sim *.gif telemetry nbody_sim_particle_mesh
 
