@@ -12,11 +12,12 @@
 
 void particle_mesh_simulation(System &universe, double dt, int grid_size) {
     universe.telemetry.clear();
-
+    
     std::vector<Vector> initial_positions;
     for (const auto& body : universe.bodies) {
         initial_positions.push_back(body.coordinates);
     }
+    universe.telemetry.push_back(positions);
 
     // Dynamic bounds based on initial body positions
     auto [min_pos, max_pos] = universe.exposeBounds();

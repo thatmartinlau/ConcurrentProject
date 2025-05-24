@@ -1,7 +1,5 @@
-#include "src/core.hpp"
-#include "src/simplesimulation.hpp"
-#include "src/barneshutt.hpp"
-#include "src/particlemesh.hpp"
+#include "core.hpp"
+
 
 #include <vector>
 #include <cmath>

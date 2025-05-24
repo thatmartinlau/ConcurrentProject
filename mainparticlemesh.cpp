@@ -4,7 +4,6 @@
 #include "src/particlemesh.hpp"
 #include "src/particlemesh_thread.hpp"
 
-
 #ifndef M_PI
 #define M_PI 3.14159265358979323
 #endif
@@ -19,8 +18,7 @@
 
 int main(int argc, char** argv) {
     // Default choice of method
-    //std::string method = "naive";
-    std::string method = "particlemesh";
+    std::string method = "particlemesh_thread";
     // Parse args for different methods
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -37,7 +35,6 @@ int main(int argc, char** argv) {
     
     System universe;
     
-    
     // Sun at approximate center
     Body sun(1.989e30,  // Mass of Sun in kg
         Vector(0, 0),   // Position at origin
@@ -46,7 +43,7 @@ int main(int argc, char** argv) {
     // Mercury
     Body mercury(3.285e23,    // Mass in kg
     Vector(57.9e9, 0),    // Position at 0.387 AU
-    Vector(0, 47360),     // Orbital velocity
+    Vector(0, 43360),     // Orbital velocity
     "gray", 2, "Mercury");
 
     // Venus
@@ -71,18 +68,65 @@ int main(int argc, char** argv) {
     Vector(0, 13070),     // Orbital velocity
     "brown", 7, "Jupiter");
 
+    // Saturn
+    Body saturn(5.683e26,     // Mass in kg
+        Vector(1.434e12, 0),  // Position at 9.582 AU
+        Vector(0, 9680),      // Orbital velocity
+        "tan", 6, "Saturn");
+
+    // Uranus
+    Body uranus(8.681e25,     // Mass in kg
+        Vector(2.871e12, 0),  // Position at 19.201 AU
+        Vector(0, 6800),      // Orbital velocity
+        "lightblue", 4, "Uranus");
+
+    // Neptune
+    Body neptune(1.024e26,    // Mass in kg
+        Vector(4.495e12, 0),  // Position at 30.047 AU
+        Vector(0, 5430),      // Orbital velocity
+        "blue", 4, "Neptune");
+
+    // Pluto (technically a dwarf planet now, but included for completeness)
+    Body pluto(1.309e22,      // Mass in kg
+        Vector(5.906e12, 0),  // Position at 39.482 AU
+        Vector(0, 4670),      // Orbital velocity
+        "gray", 1, "Pluto");
+
+    
+
     universe.add(sun);
     universe.add(mercury);
     universe.add(venus);
     universe.add(earth);
     universe.add(mars);
     // universe.add(jupiter);
+    // universe.add(neptune);
+    // universe.add(saturn);
+    // universe.add(uranus);
+    // universe.add(pluto);
 
-    
+    const double AU = 149.6e9;           // 1 AU in meters
+    const double MIN_DIST = 2.2 * AU;    // Inner asteroid belt (~2.2 AU)
+    const double MAX_DIST = 3.2 * AU;    // Outer asteroid belt (~3.2 AU)
+    const double AVG_VELOCITY = 17500;   // Average orbital velocity in m/s
+
+    // Create 50 random asteroids
+    for (int i = 0; i < 50; i++) {
+        // Random mass between 1e13 and 1e17 kg (typical asteroid masses)
+        double mass = (rand() % 10000) * 1e13;
+        double distance = MIN_DIST + (rand() % (int)(MAX_DIST - MIN_DIST));
+        double angle = (rand() % 360) * M_PI / 180.0;
+        Vector position(distance * cos(angle), distance * sin(angle));
+        double velocity_magnitude = AVG_VELOCITY * sqrt(2.2 * AU / distance);
+        Vector velocity(-velocity_magnitude * sin(angle), velocity_magnitude * cos(angle));
+        
+        Body asteroid(mass, position, velocity, "green", 1, "");
+        
+        // universe.add(asteroid);
+    }
 
 
-    double dt = 3.154e+7/500;
-    //double dt = 0.1;
+    double dt = 3600; // fuck it, one hour
     universe.dt = dt;
 
     // Dispatch to the appropriate simulation method
@@ -94,8 +138,13 @@ int main(int argc, char** argv) {
         // BarnesHut(universe, DT);
     }
     else if (method == "particlemesh"){
-        int grid_size = 1024; 
+        int grid_size = 100; // added this 
         particle_mesh_simulation(universe, dt,grid_size);
+    }else if (method == "particlemesh_thread"){
+        int grid_size = 100;
+        // number of cores of 8
+        size_t num_threads = 9;
+        particle_mesh_simulation_parallel(universe, dt, grid_size, num_threads);
     }
     #ifdef USE_CUDA
     else if (method == "gpu") {
@@ -122,24 +171,23 @@ int main(int argc, char** argv) {
         }
     }
     
-
-    // Export to CSV
-    std::ofstream file("telemetry.csv");
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open telemetry.csv for writing\n";
-        return 1;
-    }
-
-    // Add CSV header
-    file << "time";
-    for (const auto& body : universe.bodies) {
-        file << "," << body.title << "_x," << body.title << "_y";
-    }
-    file << "\n";
-
-    // Write data
     bool record_csv = true;
     if (record_csv) {
+        // Export to CSV    
+        std::ofstream file("telemetry.csv");
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open telemetry.csv for writing\n";
+            return 1;
+        }
+
+        // Add CSV header
+        file << "time";
+        for (const auto& body : universe.bodies) {
+            file << "," << body.title << "_x," << body.title << "_y";
+        }
+        file << "\n";
+
+        // Write data
         for (size_t i = 0; i < universe.telemetry.size(); i++) {
             file << std::scientific << std::setprecision(6)  // Use scientific notation for large numbers
                 << i * universe.dt; // time
@@ -150,11 +198,12 @@ int main(int argc, char** argv) {
         }
         file.close();
     }
+
     std::cout << "Simulation done. Generating the visualization...\n";
-    string out_name = "particlemesh.gif";
+    string out_name = "rockyplanets.gif";
     universe.visualize(out_name, true, true);
     std::cout << "Done! \n";
 
-    std::cout << "\n\nSimulation time: " << time_taken.count() << " milliseconds.";
+    std::cout << "\n\nSimulation time: " << time_taken.count() << " milliseconds.\n";
     return 0;
 }
