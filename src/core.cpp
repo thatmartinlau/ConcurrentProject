@@ -1,12 +1,17 @@
 #include "core.hpp"
+#include <Magick++.h>
+
 #include <cmath>
 #include <fstream>
-#include <Magick++.h>
 #include <string>
 #include <iostream>
 #include <iomanip>
 #include <chrono>
 #include <sstream>
+#include <cstdlib>
+#include <atomic>
+#include <omp.h>
+#include <thread>
 using std::string;
 using namespace Magick;
 
@@ -15,8 +20,6 @@ Vector::Vector(double x, double y) {
     data[0] = x;
     data[1] = y;
 }
-
-    
 
 Vector Vector::operator+(const Vector& other) const {
     return Vector(data[0] + other.data[0], data[1] + other.data[1]);
@@ -87,8 +90,8 @@ Vector force(Body bi, Body bj) {
 
     double dx = x2 - x1;
     double dy = y2 - y1;
-    double dist = sqrt(sqr(dx) + sqr(dy));  // Calculate distance once
-    
+    double dist = sqrt(sqr(dx) + sqr(dy)); 
+
     // Avoid division by zero
     if (dist < 1e-10) {
         return Vector(0, 0);
@@ -126,12 +129,11 @@ std::pair<Vector, Vector> System::exposeBounds() const{
     return getBounds();
 } // to be able to get the bound
 
-void System::visualize(const std::string& name, bool time=true, bool axes=true) {
+void System::visualize2(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
     const int width = 600;
-    const int height = 400;
+    const int height = 600;
     const int padding = 25;
-    std::vector<Image> frames;
 
     // Define different colors for different bodies
     std::vector<Color> colors = {
@@ -146,96 +148,100 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
     // Find bounds
     auto [min_pos, max_pos] = getBounds();
 
-    // Create frames for each time step
-    for (size_t i = 0; i < telemetry.size(); i+=50) {
-        // Progress bar; this is mainly for debug purposes
-        std::cout << i << " " << std::flush;
+    // Create directory if it doesn't exist
+    std::string dir_name = name + "_frames";
+    int a = system(("mkdir -p " + dir_name).c_str());
 
-        Image image(Geometry(width, height), Color("black"));
+    // Calculate total frames
+    size_t total_frames = FRAME_NUM;
+    const size_t step_size = STEP_COUNT / FRAME_NUM;
+    std::atomic<size_t> progress{0};
 
+    // std::cout<< telemetry.size() << step_size << "\n";
 
-        if (axes) {
-            // Draw coordinate axes
+    #pragma omp parallel
+    {
+        std::ostringstream progress_stream;
 
-            image.strokeColor("gray");
-            image.draw(DrawableLine(padding, height-padding, width-padding, height-padding)); // X axis
-            image.draw(DrawableLine(padding, height-padding, padding, padding)); // Y axis
-            
-            // Draw scale markers, this part will be commented out since this doesn't really add much to our image.
-            
-            /*
-            image.fillColor("white");
-            for(int j = 0; j <= 10; j++) {
-                int x = padding + j * (width - 2*padding) / 10;
-                int y = height - padding + 20;
-                std::string label = std::to_string(static_cast<int>(min_pos.data[0] + j * (max_pos.data[0] - min_pos.data[0]) / 10));
-                image.draw(DrawableText(x, y, label));
+        #pragma omp for schedule(dynamic)
+        for (size_t i = 0; i < telemetry.size(); i+=step_size) {
+            // Progress tracking
+            size_t frame_num = i/step_size;
+            progress_stream.str("");
+            progress_stream << "Processing frame " << frame_num << "/" << total_frames << "\r";
+            #pragma omp critical
+            {
+                std::cout << progress_stream.str() << std::flush;
             }
-            */
-        }
-        
-        
-        // For each body in the current frame, we draw its position on the image.
-        for (size_t body_idx = 0; body_idx < telemetry[i].size(); body_idx++) {
-            // Get color for this body
-            Color bodyColor = colors[body_idx % colors.size()];
-            //Color trailColor = bodyColor; //does not work with me
-            ColorRGB trailColor(bodyColor); //For Oscar when running on his local computer
-            trailColor.alpha(65535 * 0.3); // 30% opacity for trails
-            
-            // Draw trail for this body
-            /*
-            if (i > 0) {
-                for (size_t j = 0; j < i; j++) {
-                    const auto& trail_pos = telemetry[j][body_idx];
-                    int trail_x = static_cast<int>((trail_pos.data[0] - min_pos.data[0]) / (max_pos.data[0] - min_pos.data[0]) 
-                            * (width - 2*padding) + padding);
-                    int trail_y = static_cast<int>(height - ((trail_pos.data[1] - min_pos.data[1]) / (max_pos.data[1] - min_pos.data[1]) 
-                            * (height - 2*padding) + padding));
-                    
-                    image.fillColor(bodyColor);
-                    image.draw(DrawableCircle(trail_x, trail_y, trail_x + 2, trail_y + 2));
+
+            Image image(Geometry(width, height), Color("black"));
+
+            // Compression settings
+            image.quantize(256);
+            image.quality(50);
+            image.compressType(LZWCompression);
+
+            if (axes) {
+                #pragma omp critical
+                {
+                    // Draw coordinate axes
+                    image.strokeColor("gray");
+                    image.draw(DrawableLine(padding, height-padding, width-padding, height-padding)); // X axis
+                    image.draw(DrawableLine(padding, height-padding, padding, padding)); // Y axis
                 }
             }
-            */
             
-            
-            // Draw current position for this body
-            const auto& pos = telemetry[i][body_idx];
-            int x = static_cast<int>((pos.data[0] - min_pos.data[0]) / (max_pos.data[0] - min_pos.data[0]) 
-                    * (width - 2*padding) + padding);
-            int y = static_cast<int>(height - ((pos.data[1] - min_pos.data[1]) / (max_pos.data[1] - min_pos.data[1]) 
-                    * (height - 2*padding) + padding));
-            
-            image.fillColor(bodyColor);
-            image.draw(DrawableCircle(x, y, x + 5, y + 5));
+            // Draw each body
+            for (size_t body_idx = 0; body_idx < telemetry[i].size(); body_idx++) {
+                Color bodyColor = Color(bodies[body_idx].color);
+                
+                // Draw current position for this body
+                const auto& pos = telemetry[i][body_idx];
+                int x = static_cast<int>((pos.data[0] - min_pos.data[0]) / (max_pos.data[0] - min_pos.data[0]) 
+                        * (width - 2*padding) + padding);
+                int y = static_cast<int>(height - ((pos.data[1] - min_pos.data[1]) / (max_pos.data[1] - min_pos.data[1]) 
+                        * (height - 2*padding) + padding));
+                
+                #pragma omp critical
+                {
+                    image.fillColor(bodyColor);
+                    image.draw(DrawableCircle(x, y, x + 5, y + 5));
 
-            // Draw title for this body
-                image.fillColor("white");
-                // Position the title slightly above and to the right of the body
-                image.draw(DrawableText(x + 10, y - 10, bodies[body_idx].title));
+                    // Draw title
+                    image.fillColor("white");
+                    image.draw(DrawableText(x + 10, y - 10, bodies[body_idx].title));
+                }
+            }
+            
+            // Add time information
+            if (time) {
+                double current_time = i * dt;
+                std::string timeInfo = "Time: " + std::to_string(current_time) + "s";
+                #pragma omp critical
+                {
+                    image.fillColor("white");
+                    image.draw(DrawableText(padding, padding-20, timeInfo));
+                }
+            }
+
+            // Save individual frame
+            std::ostringstream frame_name;
+            frame_name << dir_name << "/frame_" << std::setw(6) << std::setfill('0') << frame_num << ".png";
+            #pragma omp critical
+            {
+                image.write(frame_name.str());
+            }
         }
-        
-        // Add time information
-        if (time) {
-            double current_time = i * dt;
-            std::string timeInfo = "Time: " + std::to_string(current_time) + "s";
-            image.fillColor("white");
-            image.draw(DrawableText(padding, padding-20, timeInfo));
-        }
-        image.animationDelay(5);
-        frames.push_back(std::move(image));
-        
-    // Image frame creation end
     }
-    std::cout << "\nImages generated. Now writing to file...\n";
 
-    // Write all frames at once
-    auto start = std::chrono::high_resolution_clock::now();
-    writeImages(frames.begin(), frames.end(), name);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Image Writing time: " << time_taken.count() << " milliseconds.";
-    frames.clear();
-    std::cout << "File written.\n";
+    std::cout << "\nAll frames generated.\n";
+    
+    // Create video using ffmpeg
+    std::string ffmpeg_command = "ffmpeg -framerate 30 -i " + dir_name + "/frame_%06d.png -c:v libx264 -pix_fmt yuv420p " + name + ".mp4 2>/dev/null";
+    int b = system(ffmpeg_command.c_str());
+
+    // Clean up frames directory
+    int c = system(("rm -rf " + dir_name).c_str());
+
+    std::cout << "Video generated: " << name << ".mp4\n";
 }

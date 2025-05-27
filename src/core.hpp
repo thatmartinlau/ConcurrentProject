@@ -6,7 +6,10 @@
 #include <Magick++.h>
 using std::string; 
 
-#define STEP_COUNT 25000
+
+// CHANGE THE VIDEO SETTINGS HERE!
+#define STEP_COUNT 15000
+#define FRAME_NUM 240
 #define G 6.67430e-11
 
 // Vector class
@@ -54,6 +57,7 @@ class System {
 
         void add(Body body);
         void visualize(const std::string& name, bool time, bool axes);
+        void visualize2(const std::string& name, bool time, bool axes);
         std::pair<Vector, Vector> exposeBounds() const; // to be able to get the bound
     
     private:
