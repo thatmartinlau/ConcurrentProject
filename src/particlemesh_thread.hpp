@@ -7,6 +7,7 @@
 #include <vector>
 
 
-void particle_mesh_simulation_parallel(System &universe, double dt, int grid_size, size_t num_threads);
+void particle_mesh_simulation_parallel(System &universe, double dt, int grid_size, size_t num_threads, double R);
+//void particle_mesh_simulation_parallel(System &universe, double dt, int grid_size);
 
 #endif 
