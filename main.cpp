@@ -28,9 +28,6 @@ int main(int argc, char** argv) {
     }
 
     Magick::InitializeMagick(nullptr);
-    MagickCore::SetMagickResourceLimit(MagickCore::AreaResource, 1024*1024*512);  // 256MB
-    MagickCore::SetMagickResourceLimit(MagickCore::MemoryResource, 1024*1024*1024);  // 512MB
-    MagickCore::SetMagickResourceLimit(MagickCore::MapResource, 1024*1024*1024);    // 512MB
     
     System universe;
     
@@ -98,6 +95,8 @@ int main(int argc, char** argv) {
     universe.add(venus);
     universe.add(earth);
     universe.add(mars);
+
+    // Not a good thing to add to the system, it strongly messes with the scaling inside the visualization.
     // universe.add(jupiter);
     // universe.add(neptune);
     // universe.add(saturn);
@@ -109,7 +108,19 @@ int main(int argc, char** argv) {
     const double MAX_DIST = 3.2 * AU;    // Outer asteroid belt (~3.2 AU)
     const double AVG_VELOCITY = 17500;   // Average orbital velocity in m/s
 
-    // Create 50 random asteroids
+    /* 
+    Can't be asked to think of a better perforamnce metric for testing the 
+    efficiency of our programs, so we'll be testing increasing numbers of 
+    asteroids to show how complexity increases super fast as we increase 
+    number of bodies.
+
+    Simple sequential simulation
+    10 asteroids: 62ms
+    50 asteroids: 799ms
+    100 asteroids: 2873ms
+    200 asteroids:
+    1000 asteroids: too long!
+    */
     for (int i = 0; i < 50; i++) {
         // Random mass between 1e13 and 1e17 kg (typical asteroid masses)
         double mass = (rand() % 10000) * 1e13;
@@ -121,12 +132,16 @@ int main(int argc, char** argv) {
         
         Body asteroid(mass, position, velocity, "green", 1, "");
         
-        // universe.add(asteroid);
+        universe.add(asteroid);
     }
+
+    
 
 
     double dt = 3600; // fuck it, one hour
     universe.dt = dt;
+
+    std::cout << "Starting the simulation...\n";
 
     // Dispatch to the appropriate simulation method
     auto start = std::chrono::high_resolution_clock::now();
@@ -138,7 +153,7 @@ int main(int argc, char** argv) {
     }
     else if (method == "particlemesh"){
         int grid_size = 100; // added this 
-        particle_mesh_simulation(universe, dt,grid_size);
+        // particle_mesh_simulation(universe, dt,grid_size);
     }
     #ifdef USE_CUDA
     else if (method == "gpu") {
@@ -165,7 +180,7 @@ int main(int argc, char** argv) {
         }
     }
     
-    bool record_csv = true;
+    bool record_csv = false;
     if (record_csv) {
         // Export to CSV    
         std::ofstream file("telemetry.csv");
@@ -194,10 +209,10 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "Simulation done. Generating the visualization...\n";
-    string out_name = "rockyplanets.gif";
-    universe.visualize(out_name, true, true);
+    string out_name = "rockyplanets";
+    universe.visualize2(out_name, false, false);
     std::cout << "Done! \n";
 
-    std::cout << "\n\nSimulation time: " << time_taken.count() << " milliseconds.\n";
+    std::cout << "Simulation time: " << time_taken.count() << " milliseconds.\n";
     return 0;
 }
