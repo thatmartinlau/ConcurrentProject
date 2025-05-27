@@ -13,6 +13,7 @@
 #include <cmath>
 #include <iomanip>
 #include <fstream>
+#include <random>
 #include <chrono>
 
 int main(int argc, char** argv) {
@@ -121,17 +122,25 @@ int main(int argc, char** argv) {
     200 asteroids:
     1000 asteroids: too long!
     */
+    // Setup random number generation
+    std::random_device rd;  // Used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); // Standard mersenne_twister_engine
+
+    // Create distributions for each random value
+    std::uniform_real_distribution<> mass_dist(1e13, 1e17);
+    std::uniform_real_distribution<> dist_dist(MIN_DIST, MAX_DIST);
+    std::uniform_real_distribution<> angle_dist(0, 2 * M_PI);
+
     for (int i = 0; i < 50; i++) {
-        // Random mass between 1e13 and 1e17 kg (typical asteroid masses)
-        double mass = (rand() % 10000) * 1e13;
-        double distance = MIN_DIST + (rand() % (int)(MAX_DIST - MIN_DIST));
-        double angle = (rand() % 360) * M_PI / 180.0;
+        double mass = mass_dist(gen);
+        double distance = dist_dist(gen);
+        double angle = angle_dist(gen);
         Vector position(distance * cos(angle), distance * sin(angle));
-        double velocity_magnitude = AVG_VELOCITY * sqrt(2.2 * AU / distance);
+        double velocity_magnitude = sqrt((6.67430e-11 * 1.989e30) / distance);
+
         Vector velocity(-velocity_magnitude * sin(angle), velocity_magnitude * cos(angle));
         
         Body asteroid(mass, position, velocity, "green", 1, "");
-        
         universe.add(asteroid);
     }
 

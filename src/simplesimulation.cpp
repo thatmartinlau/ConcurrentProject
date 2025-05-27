@@ -46,6 +46,5 @@ void naive_simulation(System &universe) {
         
 
     }
-    std::cout << universe.telemetry.size() << "\n";
     
 }

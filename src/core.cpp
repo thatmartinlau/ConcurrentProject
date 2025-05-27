@@ -157,7 +157,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
     const size_t step_size = STEP_COUNT / FRAME_NUM;
     std::atomic<size_t> progress{0};
 
-    std::cout<< telemetry.size() << step_size << "\n";
+    // std::cout<< telemetry.size() << step_size << "\n";
 
     #pragma omp parallel
     {
