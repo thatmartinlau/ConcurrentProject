@@ -21,7 +21,7 @@ int main() {
     System universe;
     
     // Initial conditions
-    double initial_velocity = 100.0;  // m/s
+    double initial_velocity = 1000.0;  // m/s
     double initial_velocity2 = 200.0;  // m/s
 
     double angle = 45.0;  // degrees
@@ -41,7 +41,7 @@ int main() {
 
     
     // Create two projectiles with different starting positions
-    Body projectile1(1.0,  // mass (kg)
+    Body projectile1(1,  // mass (kg)
                     Vector(0, 0),  // starting at origin
                     Vector(v0x, v0y),  // initial velocity
                     "red", 4, "proj 1");  // color and size
@@ -55,7 +55,7 @@ int main() {
     universe.add(projectile2);
     
     // Simulation parameters
-    double dt = 0.1;  // time step (s)
+    double dt = 0.01;  // time step (s)
     int steps = 10000;  // number of steps
     
     // Clear any existing telemetry
@@ -63,6 +63,7 @@ int main() {
     
     // Manually compute trajectories
     for (int step = 0; step < steps; ++step) {
+        std::cout << step<< " ";
         double t = step * dt;
         
         // Vector to store positions of all projectiles at this time step

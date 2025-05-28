@@ -13,6 +13,7 @@
 #include <cmath>
 #include <iomanip>
 #include <fstream>
+#include <random>
 #include <chrono>
 
 int main(int argc, char** argv) {
@@ -28,9 +29,6 @@ int main(int argc, char** argv) {
     }
 
     Magick::InitializeMagick(nullptr);
-    MagickCore::SetMagickResourceLimit(MagickCore::AreaResource, 1024*1024*512);  // 256MB
-    MagickCore::SetMagickResourceLimit(MagickCore::MemoryResource, 1024*1024*1024);  // 512MB
-    MagickCore::SetMagickResourceLimit(MagickCore::MapResource, 1024*1024*1024);    // 512MB
     
     System universe;
     
@@ -42,7 +40,7 @@ int main(int argc, char** argv) {
     // Mercury
     Body mercury(3.285e23,    // Mass in kg
     Vector(57.9e9, 0),    // Position at 0.387 AU
-    Vector(0, 47360),     // Orbital velocity
+    Vector(0, 43360),     // Orbital velocity
     "gray", 2, "Mercury");
 
     // Venus
@@ -67,15 +65,92 @@ int main(int argc, char** argv) {
     Vector(0, 13070),     // Orbital velocity
     "brown", 7, "Jupiter");
 
+    // Saturn
+    Body saturn(5.683e26,     // Mass in kg
+        Vector(1.434e12, 0),  // Position at 9.582 AU
+        Vector(0, 9680),      // Orbital velocity
+        "tan", 6, "Saturn");
+
+    // Uranus
+    Body uranus(8.681e25,     // Mass in kg
+        Vector(2.871e12, 0),  // Position at 19.201 AU
+        Vector(0, 6800),      // Orbital velocity
+        "lightblue", 4, "Uranus");
+
+    // Neptune
+    Body neptune(1.024e26,    // Mass in kg
+        Vector(4.495e12, 0),  // Position at 30.047 AU
+        Vector(0, 5430),      // Orbital velocity
+        "blue", 4, "Neptune");
+
+    // Pluto (technically a dwarf planet now, but included for completeness)
+    Body pluto(1.309e22,      // Mass in kg
+        Vector(5.906e12, 0),  // Position at 39.482 AU
+        Vector(0, 4670),      // Orbital velocity
+        "gray", 1, "Pluto");
+
+    
+
     universe.add(sun);
     universe.add(mercury);
     universe.add(venus);
     universe.add(earth);
     universe.add(mars);
-    // universe.add(jupiter);
 
-    double dt = 3.154e+7/150;
+    // Not a good thing to add to the system, it strongly messes with the scaling inside the visualization.
+    // universe.add(jupiter);
+    // universe.add(neptune);
+    // universe.add(saturn);
+    // universe.add(uranus);
+    // universe.add(pluto);
+
+    const double AU = 149.6e9;           // 1 AU in meters
+    const double MIN_DIST = 2.2 * AU;    // Inner asteroid belt (~2.2 AU)
+    const double MAX_DIST = 3.2 * AU;    // Outer asteroid belt (~3.2 AU)
+    const double AVG_VELOCITY = 17500;   // Average orbital velocity in m/s
+
+    /* 
+    Can't be asked to think of a better perforamnce metric for testing the 
+    efficiency of our programs, so we'll be testing increasing numbers of 
+    asteroids to show how complexity increases super fast as we increase 
+    number of bodies.
+
+    Simple sequential simulation
+    10 asteroids: 62ms
+    50 asteroids: 799ms
+    100 asteroids: 2873ms
+    200 asteroids:
+    1000 asteroids: too long!
+    */
+    // Setup random number generation
+    std::random_device rd;  // Used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); // Standard mersenne_twister_engine
+
+    // Create distributions for each random value
+    std::uniform_real_distribution<> mass_dist(1e13, 1e17);
+    std::uniform_real_distribution<> dist_dist(MIN_DIST, MAX_DIST);
+    std::uniform_real_distribution<> angle_dist(0, 2 * M_PI);
+
+    for (int i = 0; i < 50; i++) {
+        double mass = mass_dist(gen);
+        double distance = dist_dist(gen);
+        double angle = angle_dist(gen);
+        Vector position(distance * cos(angle), distance * sin(angle));
+        double velocity_magnitude = sqrt((6.67430e-11 * 1.989e30) / distance);
+
+        Vector velocity(-velocity_magnitude * sin(angle), velocity_magnitude * cos(angle));
+        
+        Body asteroid(mass, position, velocity, "green", 1, "");
+        universe.add(asteroid);
+    }
+
+    
+
+
+    double dt = 3600; // fuck it, one hour
     universe.dt = dt;
+
+    std::cout << "Starting the simulation...\n";
 
     // Dispatch to the appropriate simulation method
     auto start = std::chrono::high_resolution_clock::now();
@@ -87,7 +162,7 @@ int main(int argc, char** argv) {
     }
     else if (method == "particlemesh"){
         int grid_size = 100; // added this 
-        particle_mesh_simulation(universe, dt,grid_size);
+        // particle_mesh_simulation(universe, dt,grid_size);
     }
     #ifdef USE_CUDA
     else if (method == "gpu") {
@@ -114,24 +189,23 @@ int main(int argc, char** argv) {
         }
     }
     
-
-    // Export to CSV
-    std::ofstream file("telemetry.csv");
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open telemetry.csv for writing\n";
-        return 1;
-    }
-
-    // Add CSV header
-    file << "time";
-    for (const auto& body : universe.bodies) {
-        file << "," << body.title << "_x," << body.title << "_y";
-    }
-    file << "\n";
-
-    // Write data
-    bool record_csv = true;
+    bool record_csv = false;
     if (record_csv) {
+        // Export to CSV    
+        std::ofstream file("telemetry.csv");
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open telemetry.csv for writing\n";
+            return 1;
+        }
+
+        // Add CSV header
+        file << "time";
+        for (const auto& body : universe.bodies) {
+            file << "," << body.title << "_x," << body.title << "_y";
+        }
+        file << "\n";
+
+        // Write data
         for (size_t i = 0; i < universe.telemetry.size(); i++) {
             file << std::scientific << std::setprecision(6)  // Use scientific notation for large numbers
                 << i * universe.dt; // time
@@ -142,11 +216,12 @@ int main(int argc, char** argv) {
         }
         file.close();
     }
+
     std::cout << "Simulation done. Generating the visualization...\n";
-    string out_name = "rockyplanets.gif";
-    universe.visualize(out_name, true, true);
+    string out_name = "rockyplanets";
+    universe.visualize2(out_name, false, false);
     std::cout << "Done! \n";
 
-    std::cout << "\n\nSimulation time: " << time_taken.count() << " milliseconds.";
+    std::cout << "Simulation time: " << time_taken.count() << " milliseconds.\n";
     return 0;
 }

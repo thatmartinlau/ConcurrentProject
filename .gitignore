@@ -38,3 +38,5 @@
 *telemetry.csv
 .vs/
 .vscode/
+.DS_Store
+*.csv

@@ -1,9 +1,8 @@
 #include "src/core.hpp"
-#include "src/simplesimulation.hpp"
+#include "src/simplesimulation.hpp" 
 #include "src/barneshutt.hpp"
 #include "src/particlemesh.hpp"
 #include "src/particlemesh_thread.hpp"
-
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323
@@ -19,8 +18,8 @@
 
 int main(int argc, char** argv) {
     // Default choice of method
-    //std::string method = "naive";
-    std::string method = "particlemesh";
+    //std::string method = "particlemesh_thread";
+   std::string method =  "particlemesh";
     // Parse args for different methods
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -37,52 +36,36 @@ int main(int argc, char** argv) {
     
     System universe;
     
-    
-    // Sun at approximate center
-    Body sun(1.989e30,  // Mass of Sun in kg
-        Vector(0, 0),   // Position at origin
-        Vector(0, 0), "orange", 10, "Sun");  // Nearly stationary
 
-    // Mercury
-    Body mercury(3.285e23,    // Mass in kg
-    Vector(57.9e9, 0),    // Position at 0.387 AU
-    Vector(0, 47360),     // Orbital velocity
-    "gray", 2, "Mercury");
+    // Central mass (a star-like object)
+    Body central(900.0,
+        Vector(0.0, 0.0),  // Center
+        Vector(0.0, 0.0),  // Stationary
+        "yellow", 10, "Central");
 
-    // Venus
-    Body venus(4.867e24,      // Mass in kg
-    Vector(108.2e9, 0),   // Position at 0.723 AU
-    Vector(0, 35020),     // Orbital velocity
-    "yellow", 3, "Venus");
+    // Small orbiting body 1
+    Body orbiter1(1.0,
+        Vector(10.0, 0.0),   // 10 units away on x-axis
+        Vector(0.0, 3.16),   // Roughly circular orbit
+        "blue", 3, "Orbiter1");
 
-    // Earth
-    Body earth(5.972e24,      // Mass of Earth in kg
-        Vector(149.6e9, 0),   // Position at 1 AU on x-axis
-        Vector(0, 29780), "blue", 3, "Earth");    // Orbital velocity primarily in y direction
+    // Small orbiting body 2
+    Body orbiter2(0.75,
+        Vector(-15.0, 0.0),   // 15 units away on -x-axis
+        Vector(0.0, -2.58),   // Opposite orbit
+        "green", 3, "Orbiter2");
 
-    // Mars
-    Body mars(6.39e23,        // Mass of Mars in kg
-        Vector(227.9e9, 0),   // Position at 1.52 AU on x-axis
-        Vector(0, 24077), "red", 4, "Mars");    // Orbital velocity primarily in y direction
+    Body orbiter3(0.5,
+    Vector(5.0, 5.0),
+    Vector(0, 1.4),
+    "red", 3, "Orbiter3");
 
-    // Jupiter
-    Body jupiter(1.898e27,    // Mass in kg
-    Vector(778.5e9, 0),   // Position at 5.203 AU
-    Vector(0, 13070),     // Orbital velocity
-    "brown", 7, "Jupiter");
+    universe.add(central);
+    universe.add(orbiter1);
+    universe.add(orbiter2);
+    universe.add(orbiter3);
 
-    universe.add(sun);
-    universe.add(mercury);
-    universe.add(venus);
-    universe.add(earth);
-    universe.add(mars);
-    // universe.add(jupiter);
-
-    
-
-
-    double dt = 3.154e+7/500;
-    //double dt = 0.1;
+    double dt = 0.2; // fuck it, one hour
     universe.dt = dt;
 
     // Dispatch to the appropriate simulation method
@@ -94,8 +77,15 @@ int main(int argc, char** argv) {
         // BarnesHut(universe, DT);
     }
     else if (method == "particlemesh"){
-        int grid_size = 1024; 
-        particle_mesh_simulation(universe, dt,grid_size);
+        int grid_size = 10; // added this 
+        double R = 20000;
+        particle_mesh_simulation(universe, dt,grid_size, R);
+    }else if (method == "particlemesh_thread"){
+        int grid_size =  10;
+        double R = 20000;
+        // number of cores of 8
+        size_t num_threads = 5;
+        particle_mesh_simulation_parallel(universe, dt, grid_size,num_threads, R);
     }
     #ifdef USE_CUDA
     else if (method == "gpu") {
@@ -122,24 +112,23 @@ int main(int argc, char** argv) {
         }
     }
     
-
-    // Export to CSV
-    std::ofstream file("telemetry.csv");
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open telemetry.csv for writing\n";
-        return 1;
-    }
-
-    // Add CSV header
-    file << "time";
-    for (const auto& body : universe.bodies) {
-        file << "," << body.title << "_x," << body.title << "_y";
-    }
-    file << "\n";
-
-    // Write data
     bool record_csv = true;
     if (record_csv) {
+        // Export to CSV    
+        std::ofstream file("telemetry.csv");
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open telemetry.csv for writing\n";
+            return 1;
+        }
+
+        // Add CSV header
+        file << "time";
+        for (const auto& body : universe.bodies) {
+            file << "," << body.title << "_x," << body.title << "_y";
+        }
+        file << "\n";
+
+        // Write data
         for (size_t i = 0; i < universe.telemetry.size(); i++) {
             file << std::scientific << std::setprecision(6)  // Use scientific notation for large numbers
                 << i * universe.dt; // time
@@ -150,11 +139,21 @@ int main(int argc, char** argv) {
         }
         file.close();
     }
+
     std::cout << "Simulation done. Generating the visualization...\n";
-    string out_name = "particlemesh.gif";
+    string out_name;
+    if(method == "particlemesh"){
+            out_name = "particle_mesh.gif";
+    }
+    else if(method == "particlemesh_thread"){
+          out_name = "particle_mesh_thread.gif";
+    }else{
+         out_name = "rockyplanets.gif";
+    }
+ 
     universe.visualize(out_name, true, true);
     std::cout << "Done! \n";
 
-    std::cout << "\n\nSimulation time: " << time_taken.count() << " milliseconds.";
+    std::cout << "\n\nSimulation time: " << time_taken.count() << " milliseconds.\n";
     return 0;
 }
