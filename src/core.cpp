@@ -129,6 +129,11 @@ std::pair<Vector, Vector> System::exposeBounds() const{
     return getBounds();
 } // to be able to get the bound
 
+
+// In this function, we allow ourselves to use pragma omp for the visualization purposes
+// The visualization is not the most important part for multi threading, and we would just
+// like something that works simply and easily for us. The other algorithm implementations
+// will use proper multithreading, as seen in class.
 void System::visualize2(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
     const int width = 600;
@@ -240,7 +245,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
     int b = system(ffmpeg_command.c_str());
 
     // Clean up frames directory
-    int c = system(("rm -rf " + dir_name).c_str());
+    // int c = system(("rm -rf " + dir_name).c_str());
 
     std::cout << "Video generated: " << name << ".mp4\n";
 }

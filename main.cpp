@@ -16,7 +16,8 @@
 #include <random>
 #include <chrono>
 
-#define ASTEROIDS 50
+#define ASTEROIDS 10
+#define DT 3600. // Not suggested to take a timestep larger than three hours - orbits start getting weird.
 
 int main(int argc, char** argv) {
     // Default choice of method
@@ -34,6 +35,8 @@ int main(int argc, char** argv) {
     
     System universe;
     
+
+    // Define planets
     // Sun at approximate center
     Body sun(1.989e30,  // Mass of Sun in kg
         Vector(0, 0),   // Position at origin
@@ -41,15 +44,15 @@ int main(int argc, char** argv) {
 
     // Mercury
     Body mercury(3.285e23,    // Mass in kg
-    Vector(57.9e9, 0),    // Position at 0.387 AU
-    Vector(0, 43360),     // Orbital velocity
-    "gray", 2, "Mercury");
+        Vector(57.9e9, 0),    // Position at 0.387 AU
+        Vector(0, 43360),     // Orbital velocity
+        "gray", 2, "Mercury");
 
     // Venus
     Body venus(4.867e24,      // Mass in kg
-    Vector(108.2e9, 0),   // Position at 0.723 AU
-    Vector(0, 35020),     // Orbital velocity
-    "yellow", 3, "Venus");
+        Vector(108.2e9, 0),   // Position at 0.723 AU
+        Vector(0, 35020),     // Orbital velocity
+        "yellow", 3, "Venus");
 
     // Earth
     Body earth(5.972e24,      // Mass of Earth in kg
@@ -63,9 +66,9 @@ int main(int argc, char** argv) {
 
     // Jupiter
     Body jupiter(1.898e27,    // Mass in kg
-    Vector(778.5e9, 0),   // Position at 5.203 AU
-    Vector(0, 13070),     // Orbital velocity
-    "brown", 7, "Jupiter");
+        Vector(778.5e9, 0),   // Position at 5.203 AU
+        Vector(0, 13070),     // Orbital velocity
+        "brown", 7, "Jupiter");
 
     // Saturn
     Body saturn(5.683e26,     // Mass in kg
@@ -91,25 +94,21 @@ int main(int argc, char** argv) {
         Vector(0, 4670),      // Orbital velocity
         "gray", 1, "Pluto");
 
-    
-
     universe.add(sun);
     universe.add(mercury);
     universe.add(venus);
     universe.add(earth);
     universe.add(mars);
 
-    // Not a good thing to add to the system, it strongly messes with the scaling inside the visualization.
+    // Not a good thing to add to the system, it strongly messes with the scaling inside the visualization. 
+    // (Yes, a solution would be to change System::getBounds by taking the farthest distance point from the sun,
+    // then projecting that in a ray across the sun, but I'm not paid enough to do that) - Martin
     // universe.add(jupiter);
     // universe.add(neptune);
     // universe.add(saturn);
     // universe.add(uranus);
     // universe.add(pluto);
 
-    const double AU = 149.6e9;           // 1 AU in meters
-    const double MIN_DIST = 2.2 * AU;    // Inner asteroid belt (~2.2 AU)
-    const double MAX_DIST = 3.2 * AU;    // Outer asteroid belt (~3.2 AU)
-    const double AVG_VELOCITY = 17500;   // Average orbital velocity in m/s
 
     /* 
     Can't be asked to think of a better perforamnce metric for testing the 
@@ -129,6 +128,11 @@ int main(int argc, char** argv) {
     std::random_device rd;  // Used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); // Standard mersenne_twister_engine
 
+    const double AU = 149.6e9;           // 1 AU in meters
+    const double MIN_DIST = 2.2 * AU;    // Inner asteroid belt (~2.2 AU)
+    const double MAX_DIST = 3.2 * AU;    // Outer asteroid belt (~3.2 AU)
+    const double AVG_VELOCITY = 17500;   // Average orbital velocity in m/s
+
     // Create distributions for each random value
     std::uniform_real_distribution<> mass_dist(1e13, 1e17);
     std::uniform_real_distribution<> dist_dist(MIN_DIST, MAX_DIST);
@@ -147,18 +151,16 @@ int main(int argc, char** argv) {
         universe.add(asteroid);
     }
 
-    
-
-
-    double dt = 3600; // fuck it, one hour
-    universe.dt = dt;
+    universe.dt = DT;
+    System universe_multithreaded = universe;
 
     std::cout << "Starting the simulation...\n";
 
-    // Dispatch to the appropriate simulation method
+    // Dispatch to the appropriate simulation method: Do a simulation for unoptimized, then one for optimized.
     auto start = std::chrono::high_resolution_clock::now();
     if (method == "naive") {
         naive_simulation(universe);
+        optimized_simulation(universe_multithreaded);
     }
     else if (method == "barneshut") {
         // BarnesHut(universe, DT);
@@ -221,10 +223,19 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "Simulation done. Generating the visualization...\n";
-    string out_name = "rockyplanets";
-    universe.visualize2(out_name, false, false);
-    std::cout << "Done! \n";
-
     std::cout << "Simulation time: " << time_taken.count() << " milliseconds.\n";
+
+    bool visualization = false;
+    if (visualization) {
+        string out_name = "allplanets";
+        auto start2 = std::chrono::high_resolution_clock::now();
+        universe.visualize2(out_name, false, false);
+        auto end2 = std::chrono::high_resolution_clock::now();
+        auto time_taken2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+        std::cout << "Visualization time:" << time_taken2.count() << " milliseconds.\n";
+
+        std::cout << "Visualization done! Putting the video together... \n";
+    } 
+
     return 0;
 }

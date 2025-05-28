@@ -12,7 +12,8 @@ nbody:
 		src/barneshutt.cpp \
 		$(LDFLAGS) \
 		&& ./nbody_sim \
-		&& rm -f nbody_sim
+		&& rm -f nbody_sim \
+		&& echo "Done!" 
 		
 nbody_particle: 
 	$(CXX) $(CXXFLAGS) -o nbody_sim \
