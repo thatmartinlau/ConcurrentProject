@@ -157,8 +157,6 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
     const size_t step_size = STEP_COUNT / FRAME_NUM;
     std::atomic<size_t> progress{0};
 
-    // std::cout<< telemetry.size() << step_size << "\n";
-
     #pragma omp parallel
     {
         std::ostringstream progress_stream;
@@ -168,7 +166,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
             // Progress tracking
             size_t frame_num = i/step_size;
             progress_stream.str("");
-            progress_stream << "Processing frame " << frame_num << "/" << total_frames << "\r";
+            progress_stream << "Processing frame " << frame_num << "/" << total_frames << "\r" << std::flush;
             #pragma omp critical
             {
                 std::cout << progress_stream.str() << std::flush;
@@ -205,7 +203,8 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
                 #pragma omp critical
                 {
                     image.fillColor(bodyColor);
-                    image.draw(DrawableCircle(x, y, x + 5, y + 5));
+                    int radius = bodies[body_idx].size;
+                    image.draw(DrawableCircle(x, y, x + radius, y + radius));
 
                     // Draw title
                     image.fillColor("white");

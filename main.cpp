@@ -16,6 +16,8 @@
 #include <random>
 #include <chrono>
 
+#define ASTEROIDS 50
+
 int main(int argc, char** argv) {
     // Default choice of method
     std::string method = "naive";
@@ -120,6 +122,7 @@ int main(int argc, char** argv) {
     50 asteroids: 799ms
     100 asteroids: 2873ms
     200 asteroids:
+    500 asteroids: 104484ms
     1000 asteroids: too long!
     */
     // Setup random number generation
@@ -131,7 +134,7 @@ int main(int argc, char** argv) {
     std::uniform_real_distribution<> dist_dist(MIN_DIST, MAX_DIST);
     std::uniform_real_distribution<> angle_dist(0, 2 * M_PI);
 
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < ASTEROIDS; i++) {
         double mass = mass_dist(gen);
         double distance = dist_dist(gen);
         double angle = angle_dist(gen);
