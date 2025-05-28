@@ -36,3 +36,5 @@
 
 *.gif
 *telemetry.csv
+.vs/
+.vscode/
