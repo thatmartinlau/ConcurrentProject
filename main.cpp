@@ -16,7 +16,7 @@
 #include <random>
 #include <chrono>
 
-#define ASTEROIDS 10
+#define ASTEROIDS 500
 #define DT 3600. // Not suggested to take a timestep larger than three hours - orbits start getting weird.
 
 int main(int argc, char** argv) {
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     10 asteroids: 62ms
     50 asteroids: 799ms
     100 asteroids: 2873ms
-    200 asteroids:
+    200 asteroids:s 
     500 asteroids: 104484ms
     1000 asteroids: too long!
     */
@@ -157,10 +157,21 @@ int main(int argc, char** argv) {
     std::cout << "Starting the simulation...\n";
 
     // Dispatch to the appropriate simulation method: Do a simulation for unoptimized, then one for optimized.
-    auto start = std::chrono::high_resolution_clock::now();
+    
     if (method == "naive") {
-        naive_simulation(universe);
+        auto start_seq = std::chrono::high_resolution_clock::now();
+        // naive_simulation(universe);
+        auto end_seq = std::chrono::high_resolution_clock::now();
+
+        auto start_par = std::chrono::high_resolution_clock::now();
         optimized_simulation(universe_multithreaded);
+        auto end_par = std::chrono::high_resolution_clock::now();
+        auto time_taken_seq = std::chrono::duration_cast<std::chrono::milliseconds>(end_seq - start_seq);
+        auto time_taken_par = std::chrono::duration_cast<std::chrono::milliseconds>(end_par - start_par);
+
+        std::cout << "Simulation time sequential: " << time_taken_seq.count() << " milliseconds.\n";
+        std::cout << "Simulation time parallel: " << time_taken_par.count() << " milliseconds.\n";
+
     }
     else if (method == "barneshut") {
         // BarnesHut(universe, DT);
@@ -178,8 +189,7 @@ int main(int argc, char** argv) {
         std::cerr << "Unknown method “" << method << "”\n";
         return 1;
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    auto time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    
 
     // For testing purposes
     bool print_telemetry = false;
@@ -223,18 +233,19 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "Simulation done. Generating the visualization...\n";
-    std::cout << "Simulation time: " << time_taken.count() << " milliseconds.\n";
+    // std::cout << "Final universe telemetry size: " << universe_multithreaded.telemetry.size() << "\n";
 
-    bool visualization = false;
+    bool visualization = true;
     if (visualization) {
-        string out_name = "allplanets";
+        string out_name = "allplanets_nonthreaded";
+        string out_name2 = "allplanets_threaded";
         auto start2 = std::chrono::high_resolution_clock::now();
-        universe.visualize2(out_name, false, false);
+        // universe.visualize2(out_name, false, false);
+        universe_multithreaded.visualize2(out_name2, false , false);
         auto end2 = std::chrono::high_resolution_clock::now();
         auto time_taken2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
         std::cout << "Visualization time:" << time_taken2.count() << " milliseconds.\n";
 
-        std::cout << "Visualization done! Putting the video together... \n";
     } 
 
     return 0;

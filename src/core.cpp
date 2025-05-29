@@ -68,7 +68,6 @@ void Body::update(double dt) {
     // Then update velocity
     velocity.data[0] += acceleration.data[0] * dt;
     velocity.data[1] += acceleration.data[1] * dt;
-
 }
 
 
@@ -238,14 +237,14 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
         }
     }
 
-    std::cout << "\nAll frames generated.\n";
+    std::cout << "\nAll frames generated.\n" << std::flush;
     
     // Create video using ffmpeg
     std::string ffmpeg_command = "ffmpeg -framerate 30 -i " + dir_name + "/frame_%06d.png -c:v libx264 -pix_fmt yuv420p " + name + ".mp4 2>/dev/null";
     int b = system(ffmpeg_command.c_str());
 
     // Clean up frames directory
-    // int c = system(("rm -rf " + dir_name).c_str());
+    int c = system(("rm -rf " + dir_name).c_str());
 
-    std::cout << "Video generated: " << name << ".mp4\n";
+    std::cout << "Video generated: " << name << ".mp4\n" << std::flush;
 }
