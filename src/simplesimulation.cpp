@@ -5,7 +5,7 @@
 
 #define DEBUG false
 
-#define N_THREADS 20
+#define N_THREADS 5
 
 // Basic simulation algorithm for N bodies in a system.
 void naive_simulation(System &universe) {
@@ -87,25 +87,24 @@ On each simulation step:
        is negligible compare to the pull of the sun, but it's the principle that counts.)
 */
 
-void optimized_force_aux(const System& universe,  // Only read
-                        System& universe_copy,    // Modify
+void optimized_force_aux(System& universe,  // Only read
                         const int start, const int end) {
     // Take copy of the universe, and compute all the forces for the concerned bodies.
     // We are only allowed to change the values inside universe_copy.
     
     // Reset the acceleration accumulation vector.
     for (int i = start; i < end; i++) {   
-        universe_copy.bodies[i].acceleration = Vector(0,0);
+        universe.bodies[i].acceleration = Vector(0,0);
     }
 
     // Compute all the forces, just like last time.
     for (int j = start; j < end; ++j) {
-        for (size_t k = 0; k < universe_copy.bodies.size(); ++k) {
+        for (size_t k = 0; k < universe.bodies.size(); ++k) {
             if (j == k) {continue;}
-            Body& body1 = universe_copy.bodies[j];
-            Body& body2 = universe_copy.bodies[k];
+            Body& body1 = universe.bodies[j];
+            Body& body2 = universe.bodies[k];
             
-            Vector f = force(universe_copy.bodies[j], universe_copy.bodies[k]);
+            Vector f = force(universe.bodies[j], universe.bodies[k]);
             body1.acceleration += f / body1.m;   // Newton's 3rd law, duh
             // body2.acceleration += f / (-body2.m);
 
@@ -114,7 +113,6 @@ void optimized_force_aux(const System& universe,  // Only read
 }
 
 void optimized_update_aux(System& universe,          // Modify
-                        const System& universe_copy, // Only read
                         const int start, const int end, std::vector<Vector>& positions,
                         const double dt) {
     /*     
@@ -124,14 +122,13 @@ void optimized_update_aux(System& universe,          // Modify
     */
 
     for (int i = start; i < end; i++) {
-        universe.bodies[i].acceleration = universe_copy.bodies[i].acceleration;
         universe.bodies[i].update(dt);
         positions[i] = universe.bodies[i].coordinates;
     }
     // By this point, all bodies in the original universe would have their updated positions, 
     // Position vector would have everything in the correct position, as well.
 }
- 
+
 void optimized_simulation(System &universe) {
 
     // Thread initialization
@@ -155,17 +152,16 @@ void optimized_simulation(System &universe) {
     for (int step=0; step < STEP_COUNT; ++step) {
         // Inside one step!
         // Make a copy of the given system
-        System universe_copy = universe;
         std::vector<Vector> positions(length); // Pre initialize this this time, to conserve the order.
 
         int start_block = 0;
         for (int i = 0; i<N_THREADS-1; ++i) {
             int end_block = start_block + block_size;
-            workers[i] = std::thread(optimized_force_aux, std::ref(universe), std::ref(universe_copy), 
+            workers[i] = std::thread(optimized_force_aux, std::ref(universe),
                                     start_block, end_block);
             start_block = end_block;
         }
-        optimized_force_aux(universe, universe_copy, start_block, length);
+        optimized_force_aux(universe, start_block, length);
         for (int i=0; i < N_THREADS-1; ++i) {
             workers[i].join();
         }
@@ -174,43 +170,52 @@ void optimized_simulation(System &universe) {
         start_block = 0;
         for (int i = 0; i<N_THREADS-1; ++i) {
             int end_block = start_block + block_size;
-            workers[i] = std::thread(optimized_update_aux, std::ref(universe), std::ref(universe_copy),
+            workers[i] = std::thread(optimized_update_aux, std::ref(universe), 
                                     start_block, end_block, std::ref(positions), universe.dt);
             start_block = end_block;
         }
-        optimized_update_aux(universe, universe_copy, start_block, length, positions, universe.dt);
+        optimized_update_aux(universe, start_block, length, positions, universe.dt);
         for (int i=0; i < N_THREADS-1; ++i) {
             workers[i].join();
         }
 
         universe.telemetry[step] = positions; // This doesn't cause race conditions.
-        if (DEBUG) {
-            std::cout << "Step: " << step << "\n";
-            std::cout << "Telemetry size: " << universe.telemetry.size() << "\n";
-            
-            // Check if we have data for this step
-            if (step < universe.telemetry.size()) {
-                std::cout << "Bodies in this step: " << universe.telemetry[step].size() << "\n";
-                
-                // Print positions for each body
-                for (size_t i = 0; i < universe.telemetry[step].size(); i++) {
-                    const Vector& pos = universe.telemetry[step][i];
-                    std::cout << "Body " << i << " position: ("
-                            << pos.data[0] << ", " 
-                            << pos.data[1] << ")\n";
-                    
-                    // Optional: Compare with actual body positions
-                    std::cout << "  Current body position: ("
-                            << universe.bodies[i].coordinates.data[0] << ", "
-                            << universe.bodies[i].coordinates.data[1] << ")\n";
-                }
-            } else {
-                std::cout << "ERROR: No telemetry data for step " << step << "\n";
-            }
-            
-            // Add separator for readability
-            std::cout << "----------------------------------------\n";
-        }
     }
     // All steps done, Simulation done.
+}
+
+
+/*
+    (Martin's home PC - performed on Core i5-8500 6 Core CPU)
+    Simple sequential simulation
+    10 asteroids: 63ms
+    50 asteroids: 785ms
+    100 asteroids: 2873ms
+    150 asteroids: 6041ms
+    200 asteroids: 10624ms
+    500 asteroids: 65270ms
+    1000 asteroids: 251897ms
+    2000 asteroids: 1017985ms 
+
+    Simple parallelized simulation (5 threads)
+    10 asteroids: 1732ms (27.5x slower)
+    50 asteroids: 2087ms (2.65x slower)
+    100 asteroids: 3047ms (6% slower)
+    150 asteroids: 4213ms (43% faster)
+    200 asteroids: 6194ms (71% faster)
+    500 asteroids: 24611ms (2.49x faster)
+    1000 asteroids: 90238ms (2.8x faster)
+    2000 asteroids: 342844ms (3x faster)
+
+    Parameter optimisation: (on 500 asteroids)
+    3 threads: 38119ms
+    4 threads: 29924
+    5 threads: 24359ms (<- actually the optimum, not at 6 threads, since we're opening 5 extra threads, and using the last)
+    6 threads: 26222ms
+    10 threads: 30261ms
+    20 threads: 33278ms
+*/
+
+void optimized_simulationmk2(System& universe) {
+    std::cout << "Not implemented yet.";
 }

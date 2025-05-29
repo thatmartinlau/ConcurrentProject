@@ -16,7 +16,7 @@
 #include <random>
 #include <chrono>
 
-#define ASTEROIDS 500
+#define ASTEROIDS 105
 #define DT 3600. // Not suggested to take a timestep larger than three hours - orbits start getting weird.
 
 int main(int argc, char** argv) {
@@ -115,14 +115,6 @@ int main(int argc, char** argv) {
     efficiency of our programs, so we'll be testing increasing numbers of 
     asteroids to show how complexity increases super fast as we increase 
     number of bodies.
-
-    Simple sequential simulation
-    10 asteroids: 62ms
-    50 asteroids: 799ms
-    100 asteroids: 2873ms
-    200 asteroids:s 
-    500 asteroids: 104484ms
-    1000 asteroids: too long!
     */
     // Setup random number generation
     std::random_device rd;  // Used to obtain a seed for the random number engine
@@ -160,16 +152,15 @@ int main(int argc, char** argv) {
     
     if (method == "naive") {
         auto start_seq = std::chrono::high_resolution_clock::now();
-        // naive_simulation(universe);
+        naive_simulation(universe);
         auto end_seq = std::chrono::high_resolution_clock::now();
+        auto time_taken_seq = std::chrono::duration_cast<std::chrono::milliseconds>(end_seq - start_seq);
+        std::cout << "Simulation time sequential: " << time_taken_seq.count() << " milliseconds.\n";
 
         auto start_par = std::chrono::high_resolution_clock::now();
         optimized_simulation(universe_multithreaded);
         auto end_par = std::chrono::high_resolution_clock::now();
-        auto time_taken_seq = std::chrono::duration_cast<std::chrono::milliseconds>(end_seq - start_seq);
         auto time_taken_par = std::chrono::duration_cast<std::chrono::milliseconds>(end_par - start_par);
-
-        std::cout << "Simulation time sequential: " << time_taken_seq.count() << " milliseconds.\n";
         std::cout << "Simulation time parallel: " << time_taken_par.count() << " milliseconds.\n";
 
     }
@@ -235,7 +226,7 @@ int main(int argc, char** argv) {
     std::cout << "Simulation done. Generating the visualization...\n";
     // std::cout << "Final universe telemetry size: " << universe_multithreaded.telemetry.size() << "\n";
 
-    bool visualization = true;
+    bool visualization = false;
     if (visualization) {
         string out_name = "allplanets_nonthreaded";
         string out_name2 = "allplanets_threaded";
