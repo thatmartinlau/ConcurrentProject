@@ -49,6 +49,11 @@ void Vector::operator+=(const Vector& other) {
     data[1] += other.data[1];
 }
 
+void Vector::operator-=(const Vector& other) {
+    data[0] -= other.data[0];
+    data[1] -= other.data[1];
+}
+
 double Vector::norm() {
     return sqrt(data[0]*data[0] + data[1] + data[1]);
 }
@@ -245,17 +250,17 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
 
     // std::cout<< telemetry.size() << step_size << "\n";
 
-    //#pragma omp parallel
+    #pragma omp parallel
     {
         std::ostringstream progress_stream;
 
-        //#pragma omp for schedule(dynamic)
+        #pragma omp for schedule(dynamic)
         for (size_t i = 0; i < telemetry.size(); i+=step_size) {
             // Progress tracking
             size_t frame_num = i/step_size;
             progress_stream.str("");
             progress_stream << "Processing frame " << frame_num << "/" << total_frames << "\r";
-            //#pragma omp critical
+            #pragma omp critical
             {
                 std::cout << progress_stream.str() << std::flush;
             }
@@ -268,7 +273,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
             image.compressType(LZWCompression);
 
             if (axes) {
-                //#pragma omp critical
+                #pragma omp critical
                 {
                     // Draw coordinate axes
                     image.strokeColor("gray");
@@ -288,7 +293,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
                 int y = static_cast<int>(height - ((pos.data[1] - min_pos.data[1]) / (max_pos.data[1] - min_pos.data[1]) 
                         * (height - 2*padding) + padding));
                 
-                //#pragma omp critical
+                #pragma omp critical
                 {
                     image.fillColor(bodyColor);
                     int radius = bodies[body_idx].size;
@@ -304,7 +309,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
             if (time) {
                 double current_time = i * dt;
                 std::string timeInfo = "Time: " + std::to_string(current_time) + "s";
-                //#pragma omp critical
+                #pragma omp critical
                 {
                     image.fillColor("white");
                     image.draw(DrawableText(padding, padding-20, timeInfo));
@@ -314,7 +319,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
             // Save individual frame
             std::ostringstream frame_name;
             frame_name << dir_name << "/frame_" << std::setw(6) << std::setfill('0') << frame_num << ".png";
-            //#pragma omp critical
+            #pragma omp critical
             {
                 image.write(frame_name.str());
             }
