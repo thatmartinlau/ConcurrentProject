@@ -41,3 +41,5 @@
 .DS_Store
 *.csv
 *.mp4
+nbody
+nbody_sim_particle_mesh
