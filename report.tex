@@ -49,17 +49,13 @@ Below is a general view of our project repository file structure.
             .3 simplesimulation.cpp/hpp.
             .3 barneshutt.cpp/hpp.
             .3 particlemesh.cpp/hpp.
-            .3 particlemeshcuda.cpp/hpp.
             .3 particlemeshthread.cpp/hpp
-        .2 py \dotfill Python testing code.
-            .3 verifier.py.
         .2 makefile \dotfill Project builder. 
         .2 main.cpp \dotfill Main execution file.
         .2 mainparticlemesh.cpp \dotfill Aux particle mesh run file.
         .2 test\_telemetry.cpp \dotfill Telemetry test file.
         .2 report (PDF, TeX).
     }
-
 \end{tcolorbox}
 
 The work has been split as follows. The arrangement is not defining, as we like to help each other out in different parts. Our files have still been mostly separated to properly separate who worked on what functionalities.
@@ -100,7 +96,7 @@ For testing purposes, there is also a visualizer in \texttt{visualizer.py} which
 
 So far, we have a basic implementation of the naive algorithm without multi threading (most of my time was taken bugfixing core functionalities and getting visualization to work). 
 
-\begin{algorithm}
+\begin{algorithm}[H]
     \caption{Naive simulation outline}\label{alg:cap}
     \begin{algorithmic}
         \Require System of bodies with masses $m_i$, initial positions $\vec{r}_i$, velocities $\vec{v}_i$
@@ -131,64 +127,202 @@ So far, we have a basic implementation of the naive algorithm without multi thre
 Other aspects (parallelizing the update steps, parallelizing forces computations, avoiding race conditions) will be implemented later on.
 
 \section{Particle Mesh based algorithm}
-Currently I have implemented all three implementation of simple particlemesh method, thread based and cuda. I could only test the simple version as I had problems to run CUDA on my MacOS operating system. Particlemesh has currently some problems for simulating the solar system but it worked on simple example of 3-body simulation. 
+
+I have implemented a sequential Particle mesh algorithm, as well as a thread based. 
+
+
+
+Here below is the pseudo-code for the sequential implementation as well as for the thread-based implementation
 \begin{algorithm}[H]
-\caption{Particle Mesh Simulation (Sequential)}\label{alg:partmesh}
+\caption{Particle-Mesh Simulation, using Nearest-Grid-Point (NGP)}
 \begin{algorithmic}[1]
-\Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
-\Require Time step $\Delta t$, number of steps $N$, grid size $G$
+\Require System $universe$, time step $\Delta t$, grid size $N$, spatial extent $R$
 \State telemetry $\gets \emptyset$
 \State telemetry.append(initial positions)
-\State Compute bounding box: $(\min \vec{r}, \max \vec{r})$
-\State Expand bounds with padding proportional to domain size
-\State Compute cell size: $h \gets \frac{\max_x - \min_x}{G}$
-\State Initialize mass grid $M[G][G] \gets 0$
+\State boundaries $\gets [-R, R]$
+\State Compute cell size $h \gets \frac{2R}{N}$
+\State Initialize mass density grid $M[G][G] \gets 0$
 \State Initialize potential grid $\Phi[G][G] \gets 0$
-\State Compute initial half-step velocities: $\vec{v}_i^{n+1/2} = \vec{v}_i + \frac{\Delta t}{2} \vec{a}_i$
-\State Prepare FFTW input/output buffers and plans
-\For{each step $n = 1$ to $N$}
-    \State Clear mass grid $M$
-    
-    \For{each body $i$ in system}
-        \State Determine grid cell $(x, y)$ from $\vec{r}_i$
-        \State Accumulate mass: $M[x][y] \mathrel{+}= m_i$
-    \EndFor
+\State Initialize FFTW input/output arrays and plans
 
-    \State Perform forward FFT on $M$ to get $\tilde{M}$
-    
-    \For{each frequency component $(k_x, k_y)$}
-        \State Compute $k^2 = k_x^2 + k_y^2$
-        \If{$k^2 > 0$}
-            \State $\tilde{\Phi}[k_x][k_y] \gets -G \cdot \tilde{M}[k_x][k_y] / k^2$
-        \Else
-            \State $\tilde{\Phi}[k_x][k_y] \gets 0$
+\For{each time step $s = 1$ to $S$}
+    \State Clear mass density grid $M$
+
+    \For{each body b in $universe$}
+        \State $i \gets \left\lfloor \frac{x_b - \min_x}{h} \right\rfloor$
+        \State $j \gets \left\lfloor \frac{y_b - \min_y}{h} \right\rfloor$        
+        \If{$(i,j)$ in bounds}
+            \State $M[i][j] \gets M[i][j] + \text{body.mass}$
         \EndIf
     \EndFor
 
-    \State Perform inverse FFT on $\tilde{\Phi}$ to get $\Phi$
+    \State Copy grid mass to FFTW input array
+    \State Compute FFT of mass density using forward FFT
 
-    \For{each body $i$}
-        \State Determine grid cell $(x, y)$ from $\vec{r}_i$
-        \If{cell is interior}
-            \State Compute acceleration using central finite difference on $\Phi$:
-            \State $\vec{a}_i = -\nabla \Phi(x, y)$
+    \For{each $(i,j)$ in frequency domain}
+        \State Compute wave numbers $(k_x, k_y)$
+        \State Compute $k^2 \gets k_x^2 + k_y^2$
+        \If{$k^2 > 0$}
+            \State Multiply by $-\frac{G}{k^2}$ in frequency domain
+        \Else
+            \State Set value to zero
+        \EndIf
+    \EndFor
+
+    \State Compute inverse FFT to obtain gravitational potential
+    \State Normalize inverse FFT result and store in potential grid $\Phi$
+
+    \For{each body b in $universe$}
+        \State $i \gets \left\lfloor \frac{x_b - \min_x}{h} \right\rfloor$
+        \State $j \gets \left\lfloor \frac{y_b - \min_y}{h} \right\rfloor$
+        \If{$(i,j)$ is valid and not at boundary}
+           \State Compute force via central difference of potential:
+            \State $\vec{a}_i \gets -\left( \frac{\Phi[i+1][j] - \Phi[i-1][j]}{2h}, \frac{\Phi[i][j+1] - \Phi[i][j-1]}{2h} \right)$
+
         \Else
             \State $\vec{a}_i \gets (0, 0)$
         \EndIf
     \EndFor
 
     \For{each body $i$}
-        \State Update half-step velocity: $\vec{v}_i^{n+1/2} \mathrel{+}= \frac{\Delta t}{2} \vec{a}_i$
-        \State Set current velocity: $\vec{v}_i \gets \vec{v}_i^{n+1/2}$
-        \State Update position: $\vec{r}_i \mathrel{+}= \vec{v}_i^{n+1/2} \cdot \Delta t$
+        \State $\vec{v}_i \gets \vec{v}_i + \vec{a}_i \Delta t$ \Comment{Update velocity}
+        \State $\vec{r}_i \gets \vec{r}_i + \vec{v}_i \Delta t$ \Comment{Update position}
     \EndFor
-
-    \State Save current positions to telemetry
+    \State telemetry.append(current positions)
 \EndFor
 
-\State Cleanup FFTW resources
+\State Cleanup FFTW plans and memory
 \end{algorithmic}
 \end{algorithm}
+
+\begin{algorithm}[H]
+\caption{Parallel Particle-Mesh Simulation using Nearest-Grid-Point (NGP)}
+\begin{algorithmic}[1]
+\Require System $universe$, time step $\Delta t$, grid size $N$, spatial extent $R$, number of threads $T$
+\State telemetry $\gets \emptyset$
+\State telemetry.append(initial positions)
+\State boundaries $\gets [-R, R]$
+\State Compute cell size $h \gets \frac{2R}{N}$
+\State Initialize mass density grid $M[N][N] \gets 0$
+\State Initialize potential grid $\Phi[N][N] \gets 0$
+\State Initialize FFTW input/output arrays and plans
+
+\For{each time step $s = 1$ to $S$}
+    \State Clear mass density grid $M$
+
+    \State \textbf{Parallel for} each thread $t = 1$ to $T$
+        \State \quad Assign a chunk of bodies to thread $t$
+        \For{each body $b$ assigned to thread $t$}
+            \State $i \gets \left\lfloor \frac{x_b - \min_x}{h} \right\rfloor$
+            \State $j \gets \left\lfloor \frac{y_b - \min_y}{h} \right\rfloor$        
+            \If{$(i,j)$ in bounds}
+                \State \textbf{Lock} $M[i][j]$
+                \State $M[i][j] \gets M[i][j] + \text{body.mass}$
+                \State \textbf{Unlock} $M[i][j]$
+            \EndIf
+        \EndFor
+    \State \textbf{End parallel for}
+
+    \State Copy mass grid to FFTW input array
+    \State Compute FFT of mass density using forward FFT
+
+    \For{each $(i,j)$ in frequency domain}
+        \State Compute wave numbers $(k_x, k_y)$
+        \State $k^2 \gets k_x^2 + k_y^2$
+        \If{$k^2 > 0$}
+            \State Multiply by $-\frac{G}{k^2}$ in frequency domain
+        \Else
+            \State Set value to zero
+        \EndIf
+    \EndFor
+
+    \State Compute inverse FFT to obtain gravitational potential
+    \State Normalize result and store in potential grid $\Phi$
+
+    \State \textbf{Parallel for} each thread $t = 1$ to $T$
+        \State \quad Assign a chunk of bodies to thread $t$
+        \For{each body $b$ assigned to thread $t$}
+            \State $i \gets \left\lfloor \frac{x_b - \min_x}{h} \right\rfloor$
+            \State $j \gets \left\lfloor \frac{y_b - \min_y}{h} \right\rfloor$
+            \If{$(i,j)$ valid and not at boundary}
+                \State Compute force via central difference:
+                \State $\vec{a}_b \gets -\left( \frac{\Phi[i+1][j] - \Phi[i-1][j]}{2h}, \frac{\Phi[i][j+1] - \Phi[i][j-1]}{2h} \right)$
+            \Else
+                \State $\vec{a}_b \gets (0, 0)$
+            \EndIf
+        \EndFor
+    \State \textbf{End parallel for}
+
+    \State \textbf{Parallel for} each thread $t= 1$ to $T$
+        \State \quad Assign a chunk of bodies $t=1$ to $T$
+            \For {each body $b$ assigned to thread $t$}
+                \State $\vec{v}_b \gets \vec{v}_b + \vec{a}_b \Delta t$
+                \State $\vec{r}_b \gets \vec{r}_b + \vec{v}_b \Delta t$
+        \EndFor
+    \State \textbf{End parallel for}
+
+    \State telemetry.append(current positions)
+\EndFor
+
+\State Cleanup FFTW plans and memory
+\end{algorithmic}
+\end{algorithm}
+\subsection{Time performance of the particle-mesh simulation (sequential and parallel}
+The simulation where done on MacBook air with M2 chip containing 8 cores.
+All simulations where done with grid size $= 10$, a spatial extent R of $10 000$ and time increment $dt = 0.2$. Additionally, each simulation includes asteroids with high radius for their orbit (between 5 and 3000  as radius)  and the rest being small asteroids with smaller radius for their orbit (between 0.5 and 5 as radius). The reason why I included big differences in radius is to allow between uniformity in the space domain. 
+
+Parallel computation was done through parallelizing via the bodies. Each body's mass was assigned in the grid via multiple threads and the computation of their acceleration was also done through parallelization. 
+
+The fast fourier transforms as well as the computation of the potential was not done in parallel since, assigning a thread would have been very inefficient if multiple bodies where assigned on the same grid. Indeed, locking the cells of each grid to avoid race conditions would have given a performance similar to a sequential one. 
+
+However, one can still implement fast-fourier transform in parallel within the library fftw3. Unfortunately, I was not able to make it work on my machine. 
+
+\textbf{Time performance of the sequential particle-mesh simulation}
+\begin{table}[ht]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Number of Bodies} & \textbf{Execution Time (ms)} \\
+\hline
+4      & 52   \\
+5      & 54   \\
+50     & 109  \\
+100    & 157  \\
+1,000  & 941  \\
+2,000  & 3,013 \\
+5,000  & 7331 \\
+10,000 & 14 053 \\
+\hline
+\end{tabular}
+\caption{Execution time of the particle-mesh simulation for varying numbers of bodies ($\text{grid size} = 10$)}
+\label{tab:performance}
+\end{table}
+
+\textbf{Time performance of the parallel particle-mesh simulation}
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Number of Bodies} & \textbf{Threads = 5} & \textbf{Threads = 7} & \textbf{Threads = 10} \\
+\hline
+4     & 1661  & --    & --     \\
+5     & 2209  & 2848  & 4058   \\
+50    & 2295  & 2906  & 3263   \\
+100   & 2298  & 3034  & 3165   \\
+1000  & 3436  & 3800  & 5006   \\
+2000  & 5075  & 5865  & 6595   \\
+5000  & 7576  & 6244  & 6757   \\
+10000 & 18230 & 12306 & 13881  \\
+\hline
+\end{tabular}
+\caption{Execution time (in milliseconds) for varying numbers of bodies and thread counts ($\text{grid size} = 10$).}
+\label{tab:thread_performance}
+\end{table}
+
+Looking at performance we see that until 2000 bodies, sequential time-performance is better than for the parallel implementation. However, for higher number of bodies, the parallel implementation with 7 threads displays better performance. 7 threads is particularly optimal as it is very close to the number of cores in the machine on which we simulate (8 cores), allowing optimal use of the CPU.  
+
+
+
 \section{Barnes–Hut Algorithm}
 
 The Barnes–Hut algorithm reduces the complexity of the classical \(O(N^2)\) N-body force computation to approximately \(O(N\log N)\) by hierarchically clustering distant bodies.  Our implementation follows these main stages:

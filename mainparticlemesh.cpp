@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     std::uniform_real_distribution<double> close_dist_dist(0.5, 5.0);  // avoid too small radii
     std::uniform_real_distribution<double> close_angle_dist(0.0, 2 * M_PI);
 
-    for (int i = 0; i <1 ; ++i) {
+    for (int i = 0; i <1     ; ++i) {
     double mass = close_mass_dist(gen);
     double distance = close_dist_dist(gen);
     double angle = close_angle_dist(gen);
