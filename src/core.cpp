@@ -206,7 +206,6 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
 ///end marker of the vizualization function
 }
 
-////
 
 // In this function, we allow ourselves to use pragma omp for the visualization purposes
 // The visualization is not the most important part for multi threading, and we would just

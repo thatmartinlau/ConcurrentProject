@@ -8,7 +8,7 @@
 
 #define M_PI 3.14159265358979323846
 #define BIG_G 6.67e-11
-#define DEBUG false
+#define DEBUG false 
 
 void particle_mesh_simulation(System &universe, double dt, int grid_size, double R) {
     universe.telemetry.clear();

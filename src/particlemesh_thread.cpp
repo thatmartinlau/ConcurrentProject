@@ -1,6 +1,5 @@
 #include "core.hpp"
-
-
+#include "simplesimulation.hpp"
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -13,6 +12,18 @@
 #define BIG_G 6.67e-11
 #define DEBUG false
 #define THREAD_CHECKING false
+
+
+
+//use function from Martin
+void optimized_update_aux2(System& universe,          // Modify
+                        const int start, const int end, std::vector<Vector>& positions,
+                        const double dt) {
+    for (int i = start; i < end; i++) {
+        universe.bodies[i].update(dt);
+        positions[i] = universe.bodies[i].coordinates;
+    }
+}
 
 
 void particle_mesh_simulation_parallel(System &universe, double dt, int grid_size, size_t num_threads, double R) {
@@ -37,23 +48,27 @@ void particle_mesh_simulation_parallel(System &universe, double dt, int grid_siz
 
     size_t total_bodies = universe.bodies.size();
 
+    std::vector<std::thread> threads;
+    
+
+    //for assigning mass to grid
+    size_t bodies_per_thread = total_bodies / num_threads;
+    std::vector<std::mutex> grid_locks(grid_size * grid_size); // flat array of mutexes
+
+
+    // for update at the end
+    std::vector<std::thread> workers(num_threads -1);
+      
+    // Thread checking 
+    std::mutex cout_mutex;  // for synchronized printing
+    std::vector<std::vector<std::tuple<size_t, int, int>>> thread_grid_access(num_threads);
+
     for (int step = 0; step < STEP_COUNT; ++step) {
        
         for (auto &row : grid){
             std::fill(row.begin(), row.end(), 0.0);
         }
 
-        std::vector<std::thread> threads;
-        size_t bodies_per_thread = (universe.bodies.size() + num_threads) / num_threads;
-       std::vector<std::mutex> grid_locks(grid_size * grid_size); // flat array of mutexes
-
-
-        //if(THREAD_CHECKING){
-        // Add a vector to track grids accessed by each thread
-        std::mutex cout_mutex;  // for synchronized printing
-        std::vector<std::vector<std::tuple<size_t, int, int>>> thread_grid_access(num_threads);
-        //}
-    
         for (size_t t = 0; t < num_threads; ++t) {
             threads.emplace_back([&, t=t]() {
                 size_t start_idx = t * bodies_per_thread;
@@ -105,7 +120,6 @@ void particle_mesh_simulation_parallel(System &universe, double dt, int grid_siz
         threads.clear();
 
 
-        
         //std::cout<<"managed first parallelization!"<< "\n";
         // === 2. FFT and Potential Computation (single-threaded, FFTW is not thread-safe) ===
         for (int i = 0; i < grid_size; ++i){
@@ -115,9 +129,7 @@ void particle_mesh_simulation_parallel(System &universe, double dt, int grid_siz
             }
         }
         
-        
         fftw_execute(forward_plan);
-
         for (int i = 0; i < grid_size; ++i) {
             int kx_index = (i <= grid_size / 2) ? i : i - grid_size;
             double kx = 2.0 * M_PI * kx_index / (grid_size * cell_size);
@@ -174,14 +186,24 @@ void particle_mesh_simulation_parallel(System &universe, double dt, int grid_siz
         for (auto& thread : threads) thread.join();
         threads.clear();
 
-        
-        // === Save telemetry ===
-        std::vector<Vector> positions;
-        for (auto &body : universe.bodies){
-             body.update(dt);
-            positions.push_back(body.coordinates);
-        }   
-        universe.telemetry.push_back(positions);
+
+
+        std::vector<Vector> positions(total_bodies);  // prepare shared output
+        int start_idx = 0;
+        for (int i = 0; i < num_threads - 1; ++i) {
+                int end_idx = start_idx + bodies_per_thread;
+                workers[i] = std::thread(optimized_update_aux2, std::ref(universe), start_idx, end_idx, std::ref(positions), dt);
+                start_idx = end_idx;
+        }
+            // Main thread handles remaining work
+        optimized_update_aux2(universe, start_idx, total_bodies, positions, dt);
+
+            // Join worker threads
+        for (int i = 0; i < num_threads - 1; ++i) {
+                workers[i].join();
+        }
+
+        universe.telemetry.push_back(positions);  // Save telemetry for this step
 
         if (DEBUG) {
             std::cout << "cell_size: " << cell_size << "\nStep: " << step << "\n";

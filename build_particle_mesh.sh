@@ -7,7 +7,7 @@ IM_DIR="/opt/homebrew/Cellar/imagemagick/7.1.1-47"
 FFTW_DIR="/opt/homebrew/Cellar/fftw/3.3.10_2"
 
 g++ -std=c++17 mainparticlemesh.cpp \
-  src/particlemesh.cpp src/core.cpp src/simplesimulation.cpp src/particlemesh_thread.cpp  \
+  src/particlemesh.cpp src/core.cpp src/simplesimulation.cpp src/particlemesh_thread.cpp \
   -I./src \
   -I/opt/homebrew/Cellar/imagemagick/7.1.1-47/include/ImageMagick-7 \
   -I/opt/homebrew/Cellar/fftw/3.3.10_2/include \

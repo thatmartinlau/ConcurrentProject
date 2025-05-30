@@ -21,8 +21,8 @@
 
 int main(int argc, char** argv) {
     // Default choice of method
-    std::string method = "particlemesh_thread";
-    //std::string method =  "particlemesh";
+    //std::string method = "particlemesh_thread";
+    std::string method =  "particlemesh";
     // Parse args for different methods
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     std::uniform_real_distribution<double> close_dist_dist(0.5, 5.0);  // avoid too small radii
     std::uniform_real_distribution<double> close_angle_dist(0.0, 2 * M_PI);
 
-    for (int i = 0; i <50 ; ++i) {
+    for (int i = 0; i <1 ; ++i) {
     double mass = close_mass_dist(gen);
     double distance = close_dist_dist(gen);
     double angle = close_angle_dist(gen);
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
     Vector velocity(-velocity_magnitude * sin(angle), velocity_magnitude * cos(angle));
     std::string name = "InnerAsteroid " + std::to_string(i);
     Body close_asteroid(mass, position, velocity, "gray", 1, name);
-   //universe.add(close_asteroid);
+    //universe.add(close_asteroid);
     }
 
     double dt = 0.2; // fuck it, one hour
@@ -108,15 +108,16 @@ int main(int argc, char** argv) {
         // BarnesHut(universe, DT);
     }
     else if (method == "particlemesh"){
-        //int grid_size = 10; // 73 milliseconds //bodies = 4 
-        //int grid_size = 10; // 79 milliseconds //bodies = 5
-       //int grid_size = 10; // 177 milliseconds // bodies = 55
-       //int grid_size = 10;  // 254 milliseconds // bodies = 105
-       //int grid_size = 10 // 1614 milliseconds // bodies = 1005
-       //int grid_size = 10 // 14 554 milliseconds // bodies = 10 005
+        int grid_size = 10; // 52 milliseconds //bodies = 4 
+        //int grid_size = 10; // 54 milliseconds //bodies = 5
+        //int grid_size = 10; // 109 milliseconds //bodies = 50
+        //int grid_size = 10; // 157 milliseconds //bodies = 100
+       //int grid_size = 10 // 941 milliseconds // bodies = 1000
+       // int grid_size = 10 // 7331 ms // bodies = 5000
+       //int grid_size = 10 // 14 053 milliseconds // bodies = 10 000
 
        //int grid_size = 100; //5667 milliseconds // bodies = 5
-      int grid_size = 100; //5767 milliseconds // bodies = 55
+        //int grid_size = 100; //5767 milliseconds // bodies = 55
 
         double R = 10000; 
         particle_mesh_simulation(universe, dt, grid_size, R);
@@ -124,40 +125,47 @@ int main(int argc, char** argv) {
         //int grid_size = 10; //bodies = 4
         //size_t num_threads = 5; //1661 milliseconds 
 
-        //int grid_size = 10; //bodies = 5
-        // size_t num_threads = 5; //1694 milliseconds 
-        //size_t num_threads = 7;  //2118 miliseconds
-        //size_t num_threads = 10; //2899 milliseconds
+       // int grid_size = 10; //bodies = 5
+        //size_t num_threads = 5; //2209 milliseconds 
+        //size_t num_threads = 7;  //2848 miliseconds
+        //size_t num_threads = 10; //4058 milliseconds
 
-        //int grid_size = 10; //bodies = 55//
-        //size_t num_threads = 5; //  1736 milliseconds 
-        //size_t num_threads = 7; //2206 milliseconds 
+        //int grid_size = 10; //bodies = 50//
+        //size_t num_threads = 5; //  2295 milliseconds 
+        //size_t num_threads = 7; //2906 milliseconds 
         //size_t num_threads = 10; //  3263 milliseconds
-        //size_t num_threads = 55; // 15722 milliseconds
 
-        //int grid_size = 10; //bodies = 105;
-        //size_t num_threads = 5; // 1835 milliseconds
-        //size_t num_threads = 7; //2248 milliseconds 
-       //size_t num_threads = 10; //3074 milliseconds
-        //size_t num_threads = 55; //15072 milliseconds
+        //int grid_size = 10; //bodies = 100;
+        //size_t num_threads = 5; // 2298 milliseconds
+        //size_t num_threads = 7; //3034 milliseconds 
+       //size_t num_threads = 10; //3165 milliseconds
 
-        //int grid_size = 10; //bodies = 1005;
-         //size_t num_threads = 5; // 3259 milliseconds
-         //size_t num_threads = 7; // milliseconds 3412 //
-        //size_t num_threads = 10; //3074 milliseconds
+        //int grid_size = 10; //bodies = 1000;
+         //size_t num_threads = 5; // 3436 milliseconds
+         //size_t num_threads = 7; // 3800 milliseconds  //
+       // size_t num_threads = 10; //5006 milliseconds
 
-        //int grid_size = 10; // bodies = 10 005
-        //size_t num_threads = 5; //20 212 milliseconds 
-        //size_t num_threads = 7;  // 20825 milliseconds 
+        //int grid_size = 10; //bodies = 2000;
+        //size_t num_threads = 5; // 5075 milliseconds
+        //size_t num_threads = 7; // 5865 
+        //size_t num_threads = 10; // 6595 
+
+        int grid_size = 10; //bodies = 5000;
+         //size_t num_threads = 5; // 7576 milliseconds
+        //size_t num_threads = 7; // 6244 milliseconds 
+        size_t num_threads = 10; // 6757 milliseconds 
+
+
+        //int grid_size = 10; // bodies = 10 000
+        //size_t num_threads = 5; //18 230 milliseconds 
+        //size_t num_threads = 7;  // 12306 milliseconds 
+        //size_t num_threads = 10;  // 13881 milliseconds  
 
         //int grid_size = 100; //bodies = 5
         //size_t num_threads = 5; //13 402 milliseconds
         
         //int grid_size = 100; //bodies = 55
         //size_t num_threads = 5; //13 345 milliseconds 
-
-        int grid_size = 10;
-        size_t num_threads = 5;// 5 bodies
 
         double R = 10000;       
         particle_mesh_simulation_parallel(universe, dt, grid_size,num_threads, R);
