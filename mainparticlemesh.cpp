@@ -6,6 +6,7 @@
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323
+#define BIG_G 6.67e-11
 #endif
 
 #include <iostream>
@@ -15,11 +16,13 @@
 #include <iomanip>
 #include <fstream>
 #include <chrono>
+#include <random>
+
 
 int main(int argc, char** argv) {
     // Default choice of method
-    //std::string method = "particlemesh_thread";
-   std::string method =  "particlemesh";
+    std::string method = "particlemesh_thread";
+    //std::string method =  "particlemesh";
     // Parse args for different methods
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -45,25 +48,53 @@ int main(int argc, char** argv) {
 
     // Small orbiting body 1
     Body orbiter1(1.0,
-        Vector(10.0, 0.0),   // 10 units away on x-axis
-        Vector(0.0, 3.16),   // Roughly circular orbit
+        Vector(4.0, 0.0),   // 10 units away on x-axis
+        Vector(0.0, 1.16),   // Roughly circular orbit
         "blue", 3, "Orbiter1");
 
     // Small orbiting body 2
     Body orbiter2(0.75,
-        Vector(-15.0, 0.0),   // 15 units away on -x-axis
+        Vector(-8.0, 0.0),   // 15 units away on -x-axis
         Vector(0.0, -2.58),   // Opposite orbit
         "green", 3, "Orbiter2");
 
     Body orbiter3(0.5,
-    Vector(5.0, 5.0),
+    Vector(5.0, 0.0),
     Vector(0, 1.4),
     "red", 3, "Orbiter3");
+
+    Body orbiter4(0.75,
+        Vector(-7.0, 0.0),   // 15 units away on -x-axis
+        Vector(0.0, -0.58),   // Opposite orbit
+        "green", 3, "Orbiter4");
 
     universe.add(central);
     universe.add(orbiter1);
     universe.add(orbiter2);
     universe.add(orbiter3);
+    universe.add(orbiter4);
+
+
+    std::random_device rd;  // Used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); // Standard mersenne_twister_engine
+    std::uniform_real_distribution<double> close_mass_dist(0.01, 0.5);
+    std::uniform_real_distribution<double> close_dist_dist(0.5, 5.0);  // avoid too small radii
+    std::uniform_real_distribution<double> close_angle_dist(0.0, 2 * M_PI);
+
+    for (int i = 0; i <50 ; ++i) {
+    double mass = close_mass_dist(gen);
+    double distance = close_dist_dist(gen);
+    double angle = close_angle_dist(gen);
+
+    Vector position(distance * cos(angle), distance * sin(angle));
+
+    double central_mass = 900.0;
+    double velocity_magnitude = std::sqrt(G * central_mass / distance);
+    Vector velocity(-velocity_magnitude * sin(angle), velocity_magnitude * cos(angle));
+    std::string name = "InnerAsteroid " + std::to_string(i);
+    Body close_asteroid(mass, position, velocity, "gray", 1, name);
+   //universe.add(close_asteroid);
+    }
 
     double dt = 0.2; // fuck it, one hour
     universe.dt = dt;
@@ -77,14 +108,58 @@ int main(int argc, char** argv) {
         // BarnesHut(universe, DT);
     }
     else if (method == "particlemesh"){
-        int grid_size = 10; // added this 
-        double R = 20000;
-        particle_mesh_simulation(universe, dt,grid_size, R);
+        //int grid_size = 10; // 73 milliseconds //bodies = 4 
+        //int grid_size = 10; // 79 milliseconds //bodies = 5
+       //int grid_size = 10; // 177 milliseconds // bodies = 55
+       //int grid_size = 10;  // 254 milliseconds // bodies = 105
+       //int grid_size = 10 // 1614 milliseconds // bodies = 1005
+       //int grid_size = 10 // 14 554 milliseconds // bodies = 10 005
+
+       //int grid_size = 100; //5667 milliseconds // bodies = 5
+      int grid_size = 100; //5767 milliseconds // bodies = 55
+
+        double R = 10000; 
+        particle_mesh_simulation(universe, dt, grid_size, R);
     }else if (method == "particlemesh_thread"){
-        int grid_size =  10;
-        double R = 20000;
-        // number of cores of 8
-        size_t num_threads = 5;
+        //int grid_size = 10; //bodies = 4
+        //size_t num_threads = 5; //1661 milliseconds 
+
+        //int grid_size = 10; //bodies = 5
+        // size_t num_threads = 5; //1694 milliseconds 
+        //size_t num_threads = 7;  //2118 miliseconds
+        //size_t num_threads = 10; //2899 milliseconds
+
+        //int grid_size = 10; //bodies = 55//
+        //size_t num_threads = 5; //  1736 milliseconds 
+        //size_t num_threads = 7; //2206 milliseconds 
+        //size_t num_threads = 10; //  3263 milliseconds
+        //size_t num_threads = 55; // 15722 milliseconds
+
+        //int grid_size = 10; //bodies = 105;
+        //size_t num_threads = 5; // 1835 milliseconds
+        //size_t num_threads = 7; //2248 milliseconds 
+       //size_t num_threads = 10; //3074 milliseconds
+        //size_t num_threads = 55; //15072 milliseconds
+
+        //int grid_size = 10; //bodies = 1005;
+         //size_t num_threads = 5; // 3259 milliseconds
+         //size_t num_threads = 7; // milliseconds 3412 //
+        //size_t num_threads = 10; //3074 milliseconds
+
+        //int grid_size = 10; // bodies = 10 005
+        //size_t num_threads = 5; //20 212 milliseconds 
+        //size_t num_threads = 7;  // 20825 milliseconds 
+
+        //int grid_size = 100; //bodies = 5
+        //size_t num_threads = 5; //13 402 milliseconds
+        
+        //int grid_size = 100; //bodies = 55
+        //size_t num_threads = 5; //13 345 milliseconds 
+
+        int grid_size = 10;
+        size_t num_threads = 5;// 5 bodies
+
+        double R = 10000;       
         particle_mesh_simulation_parallel(universe, dt, grid_size,num_threads, R);
     }
     #ifdef USE_CUDA
@@ -140,6 +215,9 @@ int main(int argc, char** argv) {
         file.close();
     }
 
+    std::cout << "\n\nSimulation time: " << time_taken.count() << " milliseconds.\n";
+
+
     std::cout << "Simulation done. Generating the visualization...\n";
     string out_name;
     if(method == "particlemesh"){
@@ -154,6 +232,5 @@ int main(int argc, char** argv) {
     universe.visualize(out_name, true, true);
     std::cout << "Done! \n";
 
-    std::cout << "\n\nSimulation time: " << time_taken.count() << " milliseconds.\n";
     return 0;
 }

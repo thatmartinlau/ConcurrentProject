@@ -8,7 +8,7 @@
 
 #define M_PI 3.14159265358979323846
 #define BIG_G 6.67e-11
-#define DEBUG true
+#define DEBUG false
 
 void particle_mesh_simulation(System &universe, double dt, int grid_size, double R) {
     universe.telemetry.clear();
@@ -22,17 +22,7 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size, double
     //double R = 6.5e12;  // Slightly beyond Pluto
     Vector min_pos(-R, -R);
     Vector max_pos(R, R);
-    //Vector min_pos(-1.197985e+39,0);  // Using the smallest x and y values
-    //Vector max_pos(4.843318e+38, 7.459491e+24);  // Using the largest x and y values
-
-    /*
-    // Dynamic bounds based on initial body positions
-    auto [min_pos, max_pos] = universe.exposeBounds();
-    double padding = 0.1 * (max_pos - min_pos).norm();
-    min_pos = min_pos - Vector(padding, padding);
-    max_pos = max_pos + Vector(padding, padding);
-    */
-
+    
     double cell_size = (max_pos.data[0] - min_pos.data[0]) / grid_size;
 
     std::vector<std::vector<double>> grid(grid_size, std::vector<double>(grid_size, 0.0));
@@ -63,7 +53,7 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size, double
         // Deposit mass to grid
         for (const auto &body : universe.bodies) {
 
-            /*
+            
             // NGP (Nearest Grid Point Method)
             int grid_x = static_cast<int>((body.coordinates.data[0] - min_pos.data[0]) / cell_size);
             int grid_y = static_cast<int>((body.coordinates.data[1] - min_pos.data[1]) / cell_size);
@@ -72,56 +62,8 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size, double
             } else if (DEBUG) {
                 std::cerr << "Body " << body.title << " is out of bounds at step " << step << "\n";
             }
-            */
             
 
-            //CIC (Cloud in Cell)
-            /*
-            double fx = (body.coordinates.data[0] - min_pos.data[0]) / cell_size;
-            double fy = (body.coordinates.data[1] - min_pos.data[1]) / cell_size;
-
-            int i = static_cast<int>(fx);
-            int j = static_cast<int>(fy);
-
-            double dx = fx - i;
-            double dy = fy - j;
-
-            // Distribute mass to 4 surrounding cells with CIC weights
-            if (i >= 0 && i < grid_size - 1 && j >= 0 && j < grid_size - 1) {
-                grid[i][j]         += body.m * (1 - dx) * (1 - dy);
-                grid[i+1][j]       += body.m * dx * (1 - dy);
-                grid[i][j+1]       += body.m * (1 - dx) * dy;
-                grid[i+1][j+1]     += body.m * dx * dy;
-            }   else if (DEBUG) {
-                std::cerr << "Body " << body.title << " is out of bounds at step " << step << "\n";
-            }
-            */
-            
-
-            //TSC method
-            
-            double x = (body.coordinates.data[0] - min_pos.data[0]) / cell_size;
-            double y = (body.coordinates.data[1] - min_pos.data[1]) / cell_size;
-
-            int i_center = static_cast<int>(std::round(x));
-            int j_center = static_cast<int>(std::round(y));
-
-            for (int di = -1; di <= 1; ++di) {
-                for (int dj = -1; dj <= 1; ++dj) {
-                    int i = i_center + di;
-                    int j = j_center + dj;
-
-                    if (i >= 0 && i < grid_size && j >= 0 && j < grid_size) {
-                        double dx = (i + 0.5) - x;
-                        double dy = (j + 0.5) - y;
-
-                        double weight_x = tsc_weight(dx, 1.0);  // normalized over cell size
-                        double weight_y = tsc_weight(dy, 1.0);
-
-                        grid[i][j] += body.m * weight_x * weight_y;
-                    }
-                }
-            } 
             
         }
         // Copy grid mass into FFT input
@@ -159,11 +101,11 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size, double
                 potential[i][j] =  in[i * grid_size + j][0] / (grid_size * grid_size);
             }
         }
-        std::cout<< "cell_size" << cell_size <<"\n";
+        //std::cout<< "cell_size" << cell_size <<"\n";
 
         // Compute acceleration from potential gradients
         for (auto &body : universe.bodies) {
-            /*
+            
             // NGP interpolation
             int grid_x = static_cast<int>((body.coordinates.data[0] - min_pos.data[0]) / cell_size);
             int grid_y = static_cast<int>((body.coordinates.data[1] - min_pos.data[1]) / cell_size);
@@ -171,50 +113,14 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size, double
                 double fx = -(potential[grid_x + 1][grid_y] - potential[grid_x - 1][grid_y]) / (2.0 * cell_size);
                 double fy = -(potential[grid_x][grid_y + 1] - potential[grid_x][grid_y - 1]) / (2.0 * cell_size);
                 body.acceleration = Vector(fx, fy);
-                std::cout <<"fx, fy: " << fx <<" "<< fy <<" for Body " << body.title << "\n";
+                //std::cout <<"fx, fy: " << fx <<" "<< fy <<" for Body " << body.title << "\n";
             } else {
                 body.acceleration = Vector(0.0, 0.0);
             }
-            */
-            //TSC method 
-            double x = (body.coordinates.data[0] - min_pos.data[0]) / cell_size;
-            double y = (body.coordinates.data[1] - min_pos.data[1]) / cell_size;
-            //double x = (body.coordinates.data[0] ) / cell_size;
-            //double y = (body.coordinates.data[1] ) / cell_size;
-            std::cout <<"x, y: " << x <<" "<< y <<" for Body " << body.title << "\n";
-            int i_center = static_cast<int>(std::round(x));
-            int j_center = static_cast<int>(std::round(y));
-            double fx = 0.0, fy = 0.0;
-            for (int di = -1; di <= 1; ++di) {
-                for (int dj = -1; dj <= 1; ++dj) {
-                        int i = i_center + di;
-                        int j = j_center + dj;
-
-                    if (i >= 1 && i < grid_size - 1 && j >= 1 && j < grid_size - 1) {
-                            double dx = (i + 0.5) - x;
-                            double dy = (j + 0.5) - y;
-
-                            double weight_x = tsc_weight(dx, 1.0);
-                            double weight_y = tsc_weight(dy, 1.0);
-
-                            // Central differences of potential for gradient
-                        double dPhidx = (potential[i + 1][j] - potential[i - 1][j]) / (2.0 * cell_size);
-                        double dPhidy = (potential[i][j + 1] - potential[i][j - 1]) / (2.0 * cell_size);
-
-                        fx += -dPhidx * weight_x * weight_y;
-                        fy += -dPhidy * weight_x * weight_y;
-                        if(!DEBUG){
-                            std::cout <<"x, y: " << x <<" "<< y <<" for Body " << body.title << "\n";
-                            //std::cout <<"Forces DPhidx, DPhidy: " << dPhidx <<" "<< dPhidy <<" for Body " << body.title << "\n";
-                            //std::cout <<"Forces f_x, f_y: " << fx <<" "<< fy <<" for Body " << body.title << ")\n";
-                        }
-                    }
-                }
-            }
-        
-            std::cout <<"fx, fy: " << fx <<" "<< fy <<" for Body " << body.title << "\n";
-            body.acceleration = Vector(fx, fy);  
+            
+            
         }  
+        
         std::vector<Vector> positions;
         for (auto &body : universe.bodies) {
             body.update(dt);

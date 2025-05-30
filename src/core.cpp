@@ -10,7 +10,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <atomic>
-#include <omp.h>
+//#include <omp.h>
 #include <thread>
 using std::string;
 using namespace Magick;
@@ -129,6 +129,85 @@ std::pair<Vector, Vector> System::exposeBounds() const{
     return getBounds();
 } // to be able to get the bound
 
+void System::visualize(const std::string& name, bool time=true, bool axes=true) {
+    InitializeMagick(nullptr);
+    const int width = 600;
+    const int height = 400;
+    const int padding = 25;
+    std::vector<Image> frames;
+    // Define different colors for different bodies
+    std::vector<Color> colors = {
+        Color("yellow"),
+        Color("blue"),
+        Color("red"),
+        Color("green"),
+        Color("purple"),
+        Color("orange")
+    };
+    
+    // Find bounds
+    auto [min_pos, max_pos] = getBounds();
+    // Create frames for each time step
+    for (size_t i = 0; i < telemetry.size(); i+=50) {
+        // Progress bar; this is mainly for debug purposes
+        std::cout << i << " " << std::flush;
+
+        Image image(Geometry(width, height), Color("black"));
+        if (axes) {
+            // Draw coordinate axes
+            image.strokeColor("gray");
+            image.draw(DrawableLine(padding, height-padding, width-padding, height-padding)); // X axis
+            image.draw(DrawableLine(padding, height-padding, padding, padding)); // Y axis
+         }
+         // For each body in the current frame, we draw its position on the image.
+        for (size_t body_idx = 0; body_idx < telemetry[i].size(); body_idx++) {
+            // Get color for this body
+            Color bodyColor = colors[body_idx % colors.size()];
+            //Color trailColor = bodyColor; //does not work with me
+            ColorRGB trailColor(bodyColor); //For Oscar when running on his local computer
+            trailColor.alpha(65535 * 0.3); // 30% opacity for trails
+              // Draw current position for this body
+            const auto& pos = telemetry[i][body_idx];
+            int x = static_cast<int>((pos.data[0] - min_pos.data[0]) / (max_pos.data[0] - min_pos.data[0]) 
+                    * (width - 2*padding) + padding);
+            int y = static_cast<int>(height - ((pos.data[1] - min_pos.data[1]) / (max_pos.data[1] - min_pos.data[1]) 
+                    * (height - 2*padding) + padding));
+            
+            image.fillColor(bodyColor);
+            image.draw(DrawableCircle(x, y, x + 5, y + 5));
+              // Draw title for this body
+                image.fillColor("white");
+                // Position the title slightly above and to the right of the body
+                image.draw(DrawableText(x + 10, y - 10, bodies[body_idx].title));
+        }
+        
+        // Add time information
+        if (time) {
+            double current_time = i * dt;
+            std::string timeInfo = "Time: " + std::to_string(current_time) + "s";
+            image.fillColor("white");
+            image.draw(DrawableText(padding, padding-20, timeInfo));
+              }
+        image.animationDelay(5);
+        frames.push_back(std::move(image));
+        
+    // Image frame creation end
+    }
+    std::cout << "\nImages generated. Now writing to file...\n";
+
+    // Write all frames at once
+    auto start = std::chrono::high_resolution_clock::now();
+    writeImages(frames.begin(), frames.end(), name);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Image Writing time: " << time_taken.count() << " milliseconds.";
+    frames.clear();
+    std::cout << "File written.\n";
+
+///end marker of the vizualization function
+}
+
+////
 void System::visualize2(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
     const int width = 600;
@@ -146,7 +225,11 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
     };
 
     // Find bounds
-    auto [min_pos, max_pos] = getBounds();
+    
+    //auto [min_pos, max_pos] = getBounds();
+    auto bounds = getBounds();
+    auto min_pos = bounds.first;
+    auto max_pos = bounds.second;
 
     // Create directory if it doesn't exist
     std::string dir_name = name + "_frames";
@@ -159,17 +242,17 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
 
     // std::cout<< telemetry.size() << step_size << "\n";
 
-    #pragma omp parallel
+    //#pragma omp parallel
     {
         std::ostringstream progress_stream;
 
-        #pragma omp for schedule(dynamic)
+        //#pragma omp for schedule(dynamic)
         for (size_t i = 0; i < telemetry.size(); i+=step_size) {
             // Progress tracking
             size_t frame_num = i/step_size;
             progress_stream.str("");
             progress_stream << "Processing frame " << frame_num << "/" << total_frames << "\r";
-            #pragma omp critical
+            //#pragma omp critical
             {
                 std::cout << progress_stream.str() << std::flush;
             }
@@ -182,7 +265,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
             image.compressType(LZWCompression);
 
             if (axes) {
-                #pragma omp critical
+                //#pragma omp critical
                 {
                     // Draw coordinate axes
                     image.strokeColor("gray");
@@ -202,7 +285,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
                 int y = static_cast<int>(height - ((pos.data[1] - min_pos.data[1]) / (max_pos.data[1] - min_pos.data[1]) 
                         * (height - 2*padding) + padding));
                 
-                #pragma omp critical
+                //#pragma omp critical
                 {
                     image.fillColor(bodyColor);
                     image.draw(DrawableCircle(x, y, x + 5, y + 5));
@@ -217,7 +300,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
             if (time) {
                 double current_time = i * dt;
                 std::string timeInfo = "Time: " + std::to_string(current_time) + "s";
-                #pragma omp critical
+                //#pragma omp critical
                 {
                     image.fillColor("white");
                     image.draw(DrawableText(padding, padding-20, timeInfo));
@@ -227,7 +310,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
             // Save individual frame
             std::ostringstream frame_name;
             frame_name << dir_name << "/frame_" << std::setw(6) << std::setfill('0') << frame_num << ".png";
-            #pragma omp critical
+            //#pragma omp critical
             {
                 image.write(frame_name.str());
             }

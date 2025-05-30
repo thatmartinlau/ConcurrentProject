@@ -64,7 +64,17 @@
     "semaphore": "cpp",
     "sstream": "cpp",
     "stop_token": "cpp",
-    "thread": "cpp"
+    "thread": "cpp",
+    "__hash_table": "cpp",
+    "__node_handle": "cpp",
+    "charconv": "cpp",
+    "complex": "cpp",
+    "execution": "cpp",
+    "forward_list": "cpp",
+    "optional": "cpp",
+    "queue": "cpp",
+    "stack": "cpp",
+    "variant": "cpp"
   },
   "C_Cpp_Runner.cCompilerPath": "clang",
   "C_Cpp_Runner.cppCompilerPath": "clang++",
