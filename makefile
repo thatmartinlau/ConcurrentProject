@@ -12,7 +12,8 @@ nbody:
 		src/barneshutt.cpp \
 		$(LDFLAGS) \
 		&& ./nbody_sim \
-		&& rm -f nbody_sim
+		&& rm -f nbody_sim \
+		&& echo "Done!" 
 		
 nbody_particle: 
 	$(CXX) $(CXXFLAGS) -o nbody_sim \
@@ -39,5 +40,6 @@ telemetry:
 .PHONY: clean
 
 clean:
-	rm -f nbody_sim *.gif telemetry nbody_sim_particle_mesh *.mp4 *.csv
+	rm -f nbody_sim *.gif telemetry nbody_sim_particle_mesh *.csv \
+	&& rm -rf *frames*/
 

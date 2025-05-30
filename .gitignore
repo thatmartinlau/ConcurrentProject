@@ -35,5 +35,9 @@
 *.synctex.gz
 
 *.gif
+*telemetry.csv
+.vs/
+.vscode/
 .DS_Store
 *.csv
+*.mp4

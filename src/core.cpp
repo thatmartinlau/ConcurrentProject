@@ -68,7 +68,6 @@ void Body::update(double dt) {
     // Then update velocity
     velocity.data[0] += acceleration.data[0] * dt;
     velocity.data[1] += acceleration.data[1] * dt;
-
 }
 
 
@@ -208,6 +207,11 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
 }
 
 ////
+
+// In this function, we allow ourselves to use pragma omp for the visualization purposes
+// The visualization is not the most important part for multi threading, and we would just
+// like something that works simply and easily for us. The other algorithm implementations
+// will use proper multithreading, as seen in class.
 void System::visualize2(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
     const int width = 600;
@@ -288,7 +292,8 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
                 //#pragma omp critical
                 {
                     image.fillColor(bodyColor);
-                    image.draw(DrawableCircle(x, y, x + 5, y + 5));
+                    int radius = bodies[body_idx].size;
+                    image.draw(DrawableCircle(x, y, x + radius, y + radius));
 
                     // Draw title
                     image.fillColor("white");
@@ -317,7 +322,7 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
         }
     }
 
-    std::cout << "\nAll frames generated.\n";
+    std::cout << "\nAll frames generated.\n" << std::flush;
     
     // Create video using ffmpeg
     std::string ffmpeg_command = "ffmpeg -framerate 30 -i " + dir_name + "/frame_%06d.png -c:v libx264 -pix_fmt yuv420p " + name + ".mp4 2>/dev/null";
@@ -326,5 +331,5 @@ void System::visualize2(const std::string& name, bool time=true, bool axes=true)
     // Clean up frames directory
     int c = system(("rm -rf " + dir_name).c_str());
 
-    std::cout << "Video generated: " << name << ".mp4\n";
+    std::cout << "Video generated: " << name << ".mp4\n" << std::flush;
 }
