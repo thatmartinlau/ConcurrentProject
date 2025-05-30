@@ -33,6 +33,10 @@
 
 # TeX stuff
 *.synctex.gz
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
 
 *.gif
 *telemetry.csv
