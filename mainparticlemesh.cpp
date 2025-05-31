@@ -21,8 +21,8 @@
 
 int main(int argc, char** argv) {
     // Default choice of method
-    //std::string method = "particlemesh_thread";
-    std::string method =  "particlemesh";
+    std::string method = "particlemesh_thread";
+    //std::string method =  "particlemesh";
     // Parse args for different methods
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     std::uniform_real_distribution<double> close_dist_dist(0.5, 5.0);  // avoid too small radii
     std::uniform_real_distribution<double> close_angle_dist(0.0, 2 * M_PI);
 
-    for (int i = 0; i <1     ; ++i) {
+    for (int i = 0; i <2; ++i) {
     double mass = close_mass_dist(gen);
     double distance = close_dist_dist(gen);
     double angle = close_angle_dist(gen);
@@ -122,8 +122,8 @@ int main(int argc, char** argv) {
         double R = 10000; 
         particle_mesh_simulation(universe, dt, grid_size, R);
     }else if (method == "particlemesh_thread"){
-        //int grid_size = 10; //bodies = 4
-        //size_t num_threads = 5; //1661 milliseconds 
+        int grid_size = 10; //bodies = 4
+        size_t num_threads = 5; //1661 milliseconds 
 
        // int grid_size = 10; //bodies = 5
         //size_t num_threads = 5; //2209 milliseconds 
@@ -150,10 +150,10 @@ int main(int argc, char** argv) {
         //size_t num_threads = 7; // 5865 
         //size_t num_threads = 10; // 6595 
 
-        int grid_size = 10; //bodies = 5000;
+        //int grid_size = 10; //bodies = 5000;
          //size_t num_threads = 5; // 7576 milliseconds
         //size_t num_threads = 7; // 6244 milliseconds 
-        size_t num_threads = 10; // 6757 milliseconds 
+        //size_t num_threads = 10; // 6757 milliseconds 
 
 
         //int grid_size = 10; // bodies = 10 000

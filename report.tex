@@ -129,10 +129,9 @@ Other aspects (parallelizing the update steps, parallelizing forces computations
 \section{Particle Mesh based algorithm}
 
 I have implemented a sequential Particle mesh algorithm, as well as a thread based. 
+Here below is the pseudo-code for the sequential implementation as well as for the thread-based implementation. 
+For both implementations the assignment of the mass for each grid was done using a method called the Nearest Grid Point method. This means that the mass was assigned to the grid in which the particle is situated. Other methods for grid-assignment are known such as the "Cloud-In-Cell" or the "Triangle Shaped Cloud" but showed suboptimal results in parallel implementations. 
 
-
-
-Here below is the pseudo-code for the sequential implementation as well as for the thread-based implementation
 \begin{algorithm}[H]
 \caption{Particle-Mesh Simulation, using Nearest-Grid-Point (NGP)}
 \begin{algorithmic}[1]
@@ -273,9 +272,9 @@ All simulations where done with grid size $= 10$, a spatial extent R of $10 000$
 
 Parallel computation was done through parallelizing via the bodies. Each body's mass was assigned in the grid via multiple threads and the computation of their acceleration was also done through parallelization. 
 
-The fast fourier transforms as well as the computation of the potential was not done in parallel since, assigning a thread would have been very inefficient if multiple bodies where assigned on the same grid. Indeed, locking the cells of each grid to avoid race conditions would have given a performance similar to a sequential one. 
+The Fast Fourier transforms as well as the computation of the potential was not done in parallel since, assigning a thread would have been very inefficient if multiple bodies where assigned on the same grid. Indeed, locking the cells of each grid to avoid race conditions would have given a performance similar to a sequential one. In order to parallelize the computation of the gravitational potential, one needs smaller grids, and therefore divide the space into a higher value of grids. This would however mean higher number of "low-density" grids (grids with no or few bodies inside them) and therefore additional inefficient computation. 
 
-However, one can still implement fast-fourier transform in parallel within the library fftw3. Unfortunately, I was not able to make it work on my machine. 
+However, one can still implement Fast-Fourier transform in parallel within the library fftw3. Unfortunately, the performance observed was suboptimal. 
 
 \textbf{Time performance of the sequential particle-mesh simulation}
 \begin{table}[ht]
@@ -290,8 +289,8 @@ However, one can still implement fast-fourier transform in parallel within the l
 100    & 157  \\
 1,000  & 941  \\
 2,000  & 3,013 \\
-5,000  & 7331 \\
-10,000 & 14 053 \\
+5,000  & 7,331 \\
+10,000 & 14,053 \\
 \hline
 \end{tabular}
 \caption{Execution time of the particle-mesh simulation for varying numbers of bodies ($\text{grid size} = 10$)}
@@ -305,14 +304,14 @@ However, one can still implement fast-fourier transform in parallel within the l
 \hline
 \textbf{Number of Bodies} & \textbf{Threads = 5} & \textbf{Threads = 7} & \textbf{Threads = 10} \\
 \hline
-4     & 1661  & --    & --     \\
-5     & 2209  & 2848  & 4058   \\
-50    & 2295  & 2906  & 3263   \\
-100   & 2298  & 3034  & 3165   \\
-1000  & 3436  & 3800  & 5006   \\
-2000  & 5075  & 5865  & 6595   \\
-5000  & 7576  & 6244  & 6757   \\
-10000 & 18230 & 12306 & 13881  \\
+4     & 1,661  & --    & --     \\
+5     & 2,209  & 2,848  & 4,058   \\
+50    & 2,295  & 2,906  & 3,263   \\
+100   & 2,298  & 3,034  & 3,165   \\
+1,000  & 3,436  & 3,800  & 5,006   \\
+2,000  & 5,075  & 5,865  & 6,595   \\
+5,000  & 7,576  & 6,244  & 6,757   \\
+10,000 & 18,230 & 12,306 & 13,881  \\
 \hline
 \end{tabular}
 \caption{Execution time (in milliseconds) for varying numbers of bodies and thread counts ($\text{grid size} = 10$).}

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.5.20)  30 MAY 2025 18:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.5.20)  31 MAY 2025 12:06
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -626,7 +626,7 @@ Overfull \vbox (52.21938pt too high) has occurred while \output is active []
 [5]
 
 [6]
-Overfull \hbox (26.16872pt too wide) in paragraph at lines 386--388
+Overfull \hbox (26.16872pt too wide) in paragraph at lines 385--387
 []\OT1/cmtt/m/n/10 computeForcesParallel(System&, QuadNode\OMS/cmsy/m/n/10 ^^B\OT1/cmtt/m/n/10 , double theta) \OT1/cmr/m/n/10 spawns a pool of \OT1/cmtt/m/n/10 std::thread\OT1/cmr/m/n/10 s,
  []
 
@@ -649,9 +649,9 @@ Here is how much of TeX's memory you used:
  46022 multiletter control sequences out of 15000+600000
  568504 words of font info for 74 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 98i,9n,105p,712b,589s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 98i,9n,105p,783b,589s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb>
-Output written on "/Users/oscarpeyron/Downloads/004_ÉTUDE POST-BAC /Bachelor/003 - YEAR /SEMESTER 6/CSE305/ConcurrentProject/report.pdf" (8 pages, 273177 bytes).
+Output written on "/Users/oscarpeyron/Downloads/004_ÉTUDE POST-BAC /Bachelor/003 - YEAR /SEMESTER 6/CSE305/ConcurrentProject/report.pdf" (8 pages, 273939 bytes).
 PDF statistics:
  198 PDF objects out of 1000 (max. 8388607)
  151 compressed objects within 2 object streams

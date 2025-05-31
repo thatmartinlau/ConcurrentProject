@@ -38,6 +38,11 @@ void particle_mesh_simulation_parallel(System &universe, double dt, int grid_siz
     double cell_size = 2 * R / grid_size;
     double chunk_width = 2 * R / num_threads;
 
+
+    //FFTW thread
+    //fftw_init_threads();                         // ← Enable FFTW threading
+    //fftw_plan_with_nthreads(num_threads);
+
     fftw_complex *in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * grid_size * grid_size);
     fftw_complex *out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * grid_size * grid_size);
     fftw_plan forward_plan = fftw_plan_dft_2d(grid_size, grid_size, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -219,5 +224,9 @@ void particle_mesh_simulation_parallel(System &universe, double dt, int grid_siz
     fftw_destroy_plan(backward_plan);
     fftw_free(in);
     fftw_free(out);
+
+    //FFTW thread
+    //fftw_cleanup_threads();
+
 }
 
