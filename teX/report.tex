@@ -16,7 +16,8 @@
 \usepackage{algorithm}
 
 
-\title{CSE305 Concurrent Programming: N-Body simulation project}
+\title{CSE305 Concurrent Programming: N-Body simulation project\\[0.5em]
+\href{https://github.com/thatmartinlau/ConcurrentProject}{\small{GitHub Repository (Public)}}}
 \author{Martin Lau, Oscar Peyron, Ziyue Qiu}
 \date{\today}
 
@@ -27,7 +28,7 @@
 \section{Introduction}
 This document outlines the N-Body simulation project for CSE305, which includes how we approached the problem, our project structure, code breakdown and strategies, and encountered difficulties.
 
-To get started quickly, try typing \texttt{make nbody} in the project directory, and generate a basic gif file.
+To get started quickly, try typing \texttt{make nbody} in the project directory, and generate a basic mp4 file.
 For information on how to execute the code, check our README file.
 
 For this project, our aim is to be able to simulate systems of bodies with forces interacting with one another in 2D (such as orbiting planets around the solar system with gravitational forces, or with particles interacting with each other with Coulomb forces). This therefore includes two sections:
@@ -41,9 +42,6 @@ Below is a general view of our project repository file structure.
 \begin{tcolorbox}[title=Project directory summary]
     \dirtree{%
         .1 /.
-        .2 output \dotfill Output gif and csv files.
-            .3 telemetry.csv.
-            .3 out.gif.
         .2 src \dotfill Core files.
             .3 core.cpp/hpp \dotfill Used throughout the entire proj.
             .3 simplesimulation.cpp/hpp.
@@ -53,7 +51,6 @@ Below is a general view of our project repository file structure.
         .2 makefile \dotfill Project builder. 
         .2 main.cpp \dotfill Main execution file.
         .2 mainparticlemesh.cpp \dotfill Aux particle mesh run file.
-        .2 test\_telemetry.cpp \dotfill Telemetry test file.
         .2 report (PDF, TeX).
     }
 \end{tcolorbox}
@@ -62,7 +59,7 @@ The work has been split as follows. The arrangement is not defining, as we like 
 \begin{enumerate}
     \item Martin handles general project structure, core classes, visualization, and the naive and its optimized algorithm implementation.
     \item Ziyue handles the Barnes Hutt algorithm.
-    \item Oscar handles the Particle Mesh algorithm implementation (simple, thread based and cuda implementation)
+    \item Oscar handles the Particle Mesh algorithm implementation (simple, thread based and cuda implementation) % @Oscar, is the cuda implementation still there? Else, remove the bit on it.
 \end{enumerate}
 
 
@@ -72,37 +69,319 @@ The work has been split as follows. The arrangement is not defining, as we like 
 
 There are 3 primary classes defined used throughout our project: \texttt{Vector, Body, System}. These are defined in \texttt{core.cpp/hpp.}
 \begin{enumerate}
-    \item \texttt{Vector} holds information on a pair of numbers, and also allows for operations with other vectors/scalars (as opposed to using \texttt{std::pair}).
+    \item \texttt{Vector} holds information on a pair of numbers, and also allows for operations like dot products with other vectors/scalars (as opposed to using \texttt{std::pair}).
     \item \texttt{Body} holds information on a given particle or body, including its mass, coordinates, velocity, and acceleration. It also contains an update method which updates its position and velocity based on acceleration. 
     \item \texttt{System} stores a collection of bodies and its recorded telemetry from the simulations we are going to do. It also contains the visualization function, which takes its recorded telemetry and outputs an animated file.
 \end{enumerate} 
-\textit{Note: This organization is heavily inspired from one assignment from CSE306 Computer Graphics.}
+\textit{Note: This organization is heavily inspired from assignment one from CSE306 Computer Graphics.}
 
 Elaborating more on the telemetry stored within the \texttt{System} class, this is stored as a vector of vector of \texttt{Vector}. What a mouthful! Our simulations creates different steps/frames. Each step/frame contains the positions of all bodies inside the system (this is a vector of \texttt{Vector}). To have the entire telemetry, we have a vector of frames, or the aforementioned data structure for the telemetry.
 
 \subsection{Visualization code}
 
-To visualize the code, we opt to create a gif animation after the telemetry is recorded, using the \texttt{ImageMagick/Magick++} libraries. The bulk of the visualization code is located in \texttt{core.cpp} as a method for the \texttt{System} class. As of present, the visualization function works in two steps. First, it creates the frames for the animation, then writes the frames to a gif file. The frame creation is relatively quick, and most of the visualization time is actually spent in one line (\texttt{writeImages(frames.begin(), frames.end(), name)}). 
+To visualize the code, we opt to create a gif animation after the telemetry is recorded, using the \texttt{ImageMagick/Magick++} libraries. The bulk of the visualization code is located in \texttt{core.cpp} as a method for the \texttt{System} class. As of present, the visualization function works in two steps. First, it creates the frames for the animation, then merges the frames to an animation. 
 
-We will look into further solutions to try and decrease the time taken to create the visualization gifs, like reducing image quality, or the number of frames. 
+There are currently two version of the visualize function (\texttt{visualize, visualize2}). One implementation uses parallelization with \texttt{pragma omp}, while the other one doesn't. This distinction is made as some members working on Mac computers were unable to run the \texttt{omp} library. Moreover, we allow ourselves to use this parallelization solution as opposed to scheduling threads ourselves as to not spend too much time on the visualization, as this is not the primary focus of the project. 
 
-For testing purposes, there is also a visualizer in \texttt{visualizer.py} which creates a animation using Python's \texttt{matplotlib} library, working significantly faster, allowing us to test the correctness of our telemetries.
-
-\begin{center}
+\begin{figure}[h]
+    \centering
     \includegraphics[scale=0.5]{screenshot.jpg}
-\end{center}
+    \caption{Early version of our visualization function.}
+\end{figure}
 
-\section{Naive algorithm}
+\subsection{Benchmarking}
 
-So far, we have a basic implementation of the naive algorithm without multi threading (most of my time was taken bugfixing core functionalities and getting visualization to work). 
+We aim to design and implement fast algorithms to simulate the gravitational forces between growing numbers of $N$ within our system. Rather than generate $N$ random bodies and perform random simulations of particles with very unexpected behavior, we decided to implement the \href{https://en.wikipedia.org/wiki/Asteroid_belt}{asteroid belt} within our simulation, increasing the numbers of asteroids for heavier workloads.
 
+This allowed us to make a simple script to generate random asteroids in our \texttt{main.cpp} code, while also allowing us to generate cool orbit visualizations of the rocky planets of the solar system. 
+
+The asteroids are instantiated randomly, generated with random distances from the sun between 2.2 and 3.2 Astronomical units, random masses between $10^{13}$kg and $10^{17}$kg, and at random angles between $0$ and $2\pi$. Their initial velocities are all the same.
+
+Adding asteroids also gave us the benefit of checking whether our simulations were correct for large numbers of bodies (if they started flying away, we'd know straight away that our simulation was incorrect!)
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.3\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{500asteroids.png}
+        \label{fig:image1}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.3\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{1000asteroids.png}
+        \label{fig:image2}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.3\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{2000asteroids.png}
+        \label{fig:image3}
+    \end{minipage}
+    \caption{Visualizations with $N=500, 1000,2000$ asteroids, respectively.}
+\end{figure}
+
+\section{Simple algorithm}
+
+Three approaches are proposed inside \texttt{simplesimulation.cpp}:
+\begin{enumerate}
+   \item Naive implementation: Direct, sequential implementation
+   \item Parallelized implementation: directly imitating the sequential implementation, using auxiliary functions scheduled through \texttt{std::thread}. No atomic variables or mutexes used, but forces are computed twice.
+   \item Better parallelized implementation: Avoids use of mutexes and atomic variables, while also avoid computing forces twice at the cost of higher memory complexity.
+\end{enumerate}
+
+\subsection{Algorithms}
+
+\textit{The pseudocode for each algorithm's implementations is shown inside the appendix.}
+
+\textbf{Simple, sequential algorithm:}
+The first algorithm shows our simple implementation using Newtonian physics to update the positions of all bodies inside of the system. Note that this already manages to avoid computing the forces twice, by avoiding iterating over two same pairs $(i,j)$ inside the loop. This algorithm is effective for small numbers of bodies.
+
+
+\textbf{Parallelized algorithm:}
+The second algorithm parallelizes the first one, to some extent. By nature of the simulation, we cannot parallelize the simulation steps, as future states of the system depend on past ones. Therefore, we can only parallelize the inside of a simulation step. Thankfully, there is a lot to parallelize, including the forces calculation and the update step.
+
+The second algorithm does a "dumb" parallelization, that is, does exactly what the sequential version does, just directly parallelized. To parallelize, the main race condition consideration was the computation of the acceleration vectors for each body, as several threads might update the same vector, causing issues.
+
+When designing this algorithm, there were two options, parallelize everything with one auxiliary function using mutexes and atomic variables, or use two functions without using any mutexes. We decide to opt for the second option. In our algorithm, we have an auxiliary function to compute forces, and one to update positions.
+
+Bodies are split up in batches: each thread handles one batch and iterates over each body inside the batch. Inside each body iteration, it computes the force between this body and all other bodies inside the system, and only updates the acceleration vector for that body (updating acceleration vectors for bodies outside the batch would cause race conditions). Keeping this arrangement allows us to avoid race conditions without using mutexes or atomic variables, at the cost of computing everything twice.
+
+
+\textbf{Better parallelized algorithm:}
+This third algorithm attempts to improve upon the second one, by having to remove the need to compute everything twice while still parallelizing. For this, we split the algorithm into three auxiliary functions: computing forces (and storing them to a matrix), computing accelerations, and updating the positions. For this, we introduce the force matrix:
+
+\[\begin{pmatrix}
+f_{00} & f_{01} & f_{02} & \cdots & f_{0N} \\
+f_{10} & f_{11} & f_{12} & \cdots & f_{1N} \\
+f_{20} & f_{21} & f_{22} & \cdots & f_{2N} \\
+\vdots & \ddots & \ddots & \ddots & \vdots \\
+f_{N0} & f_{N1} & f_{N2} & \cdots & f_{NN} \\
+\end{pmatrix}
+\]
+
+Each cell in the matrix $f_{ij}$ represents the force exerted by Body $i$ on Body $j$. Now, thanks to the force computation formula, we know that $f_{ii}=0$ for all $i$, and $f_{ij}= -f_{ji}$. Therefore, it suffices to only compute either the upper or lower triangle of this matrix to obtain all the accelerations needed. To split the workload, split the columns from 1 to N, and allocate each column to each thread Round Robin style. For example, with 5 threads, we allocate all columns $i\mod(5)$ to thread $i$. In each thread, we compute the forces above or below the diagonal, and store only one half of the matrix (thanks to the antisymmetric property).
+
+Once the forces computed, we join all threads and compute the accelerations by summing each column of the matrix. Finally, after synchronising again, we compute the updated positions.
+
+\subsection{Results}
+
+With these algorithms in hand, we can begin testing. We start with hyper parameter testing. Using the university SSH \texttt{lada} computer, using \texttt{nproc} shows that we have 28 useable cores. We look for the number of threads that give the best performance when simulating 500 asteroids.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Number of Threads} & \textbf{Parallel simulation 1} & \textbf{Parallel simulation 2} \\
+\hline
+5     & 22,398  & 10,780       \\
+7     & 18,105  & 10,471    \\
+10    & 15,147  & 10,643   \\
+13    & 13,502  & 10,501   \\
+16    & 13,278  & 12,043   \\
+20    & 13,747  & 13,249   \\
+23    & 15,300  & 15,046  \\
+27    & 15,646  & 16,650 \\
+\hline
+\end{tabular}
+\caption{Execution time (in milliseconds) for varying numbers thread counts ($\text{N Bodies} = 500$). Tested on Lada SSH computer - Intel Core i7 14700K - lower times is better.}
+\label{tab:thread_performance}
+\end{table}
+
+We find most favorable results around 13-14 threads, especially for the second algorithm's performance, where the time saved from parallelization does not make up for the overhead for setting up and synchronising multiple threads. So, using 13 threads, we now test the sequential, parallel and better parallel algorithms for increasing numbers of asteroid bodies simulated.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} \\
+\hline
+0     & 4  & 6,405    & 9,598     \\
+10     & 41  & 5,250  & 7,824   \\
+50    & 468  & 6,567  & 9,752   \\
+100   & 1,689  & 5,739  & 8,151   \\
+200 & 6,573 & 4,747 & 5,566 \\ 
+500 & 38,384 & 13,565 & 10,554 \\
+1,000  &  148,840 & 27,047  &  22,326  \\
+2,000 & 593,866 & 125,044 & 75,797 \\
+3,000 & 1,340,074 & 270,069 & 191,026 \\
+\hline
+\end{tabular}
+\caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 13$)Tested on Lada SSH computer - Intel Core i7 14700K - lower times is better.}
+\label{tab:thread_performance}
+\end{table}
+
+I would also like to include the two tables below having tested my code on my home PC, to further compare with the obtained results from the SSH computer simulations.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} \\
+\hline
+10     & 63  & 1,732  & 2,651   \\
+50    & 785  & 2,087  & 2,779   \\
+100   & 2,873  & 3,047  & 3,327   \\
+150 & 6,041 & 4,213 & 3,944\\
+200 & 10,624 & 6,194 & 4,403 \\ 
+500 & 65,270 & 24,611 & 12,772 \\
+1,000  &  251,897 & 90,238  &  57,094  \\
+2,000 & 1,017,985& 342,844& 212,045\\
+3,000 & 2,229,012 & 778,039 & 480,847 \\
+\hline
+\end{tabular}
+\caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 13$)Tested on Lada SSH computer - Intel Core i7 14700K - lower times is better.}
+\label{tab:thread_performance}
+\end{table}
+
+From the results, we can make several observations. Overall, we can say that these observations follow our expectations very well. On both computers, we can see that for very small number of bodies, it's better to run sequential as creating and synchronising threads is computationally expensive and gives little return. However, for huge amounts of bodies simulated, the sequential version was extremely slow while very strong improvements was shown by both parallel versions.
+
+Another point of interest is the performance difference between both parallel implementations. Here, we can see that the better parallel performs better asymptotically, as expected. As N grows very large, we can see that indeed, the ratio in computation time between the two is close to 2, given how the better parallel implementation doesn't compute forces twice over.
+
+
+
+\section{Particle Mesh based algorithm}
+
+I have implemented a sequential Particle mesh algorithm, as well as a thread based. 
+Here below is the pseudo-code for the sequential implementation as well as for the thread-based implementation. 
+For both implementations the assignment of the mass for each grid was done using a method called the Nearest Grid Point method. This means that the mass was assigned to the grid in which the particle is situated. Other methods for grid-assignment are known such as the "Cloud-In-Cell" or the "Triangle Shaped Cloud" but showed suboptimal results in parallel implementations. 
+
+\subsection{Time performance of the particle-mesh simulation (sequential and parallel}
+The simulation where done on MacBook air with M2 chip containing 8 cores.
+All simulations where done with grid size $= 10$, a spatial extent R of $10 000$ and time increment $dt = 0.2$. Additionally, each simulation includes asteroids with high radius for their orbit (between 5 and 3000  as radius)  and the rest being small asteroids with smaller radius for their orbit (between 0.5 and 5 as radius). The reason why I included big differences in radius is to allow between uniformity in the space domain. 
+
+Parallel computation was done through parallelizing via the bodies. Each body's mass was assigned in the grid via multiple threads and the computation of their acceleration was also done through parallelization. 
+
+The Fast Fourier transforms as well as the computation of the potential was not done in parallel since, assigning a thread would have been very inefficient if multiple bodies where assigned on the same grid. Indeed, locking the cells of each grid to avoid race conditions would have given a performance similar to a sequential one. In order to parallelize the computation of the gravitational potential, one needs smaller grids, and therefore divide the space into a higher value of grids. This would however mean higher number of "low-density" grids (grids with no or few bodies inside them) and therefore additional inefficient computation. 
+
+However, one can still implement Fast-Fourier transform in parallel within the library fftw3. Unfortunately, the performance observed was suboptimal. 
+
+\textbf{Time performance of the parallel particle-mesh simulation}
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Threads = 5} & \textbf{Threads = 7} & \textbf{Threads = 10} \\
+\hline
+4      & 52    & 1,661  & --    & --     \\
+5      & 54    & 2,209  & 2,848  & 4,058   \\
+50     & 109   & 2,295  & 2,906  & 3,263   \\
+100    & 157   & 2,298  & 3,034  & 3,165   \\
+1,000  & 941   & 3,436  & 3,800  & 5,006   \\
+2,000  & 3,013  & 5,075  & 5,865  & 6,595   \\
+5,000  & 7,331  & 7,576  & 6,244  & 6,757   \\
+10,000 & 14,053  & 18,230 & 12,306 & 13,881  \\
+\hline
+\end{tabular}
+\caption{Execution time (in milliseconds) for varying numbers of bodies and thread counts ($\text{grid size} = 10$).}
+\label{tab:thread_performance}
+\end{table}
+
+Looking at performance we see that until 2000 bodies, sequential time-performance is better than for the parallel implementation. However, for higher number of bodies, the parallel implementation with 7 threads displays better performance. 7 threads is particularly optimal as it is very close to the number of cores in the machine on which we simulate (8 cores), allowing optimal use of the CPU.  
+
+
+
+\section{Barnes–Hut Algorithm}
+
+The Barnes–Hut algorithm reduces the complexity of the classical \(O(N^2)\) N-body force computation to approximately \(O(N\log N)\) by hierarchically clustering distant bodies.  Our implementation follows these main stages:
+
+\begin{algorithm}[H]
+    \caption{Barnes–Hut Simulation Outline}\label{alg:bh}
+    \begin{algorithmic}[1]
+        \Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
+        \Require Time step $\Delta t$, number of steps $N$, opening angle $\theta$
+        \State telemetry $\gets \emptyset$
+        \State telemetry.append(initial positions)
+        \For{step $\gets 0$ \textbf{to} $N-1$}
+            \State $[\texttt{minB},\texttt{maxB}] \gets \texttt{computeBounds}(\texttt{universe})$
+            \State $\texttt{root} \gets \texttt{createRootNode}([\texttt{minB},\texttt{maxB}])$
+            \For{each body $b_i$}
+                \State $\texttt{insertBody}(\texttt{root}, b_i)$
+            \EndFor
+            \State $\texttt{computeMassDistribution}(\texttt{root})$
+            \For{each body $b_i$}
+                \State $\vec{a}_i \gets \texttt{forceOnBody}(b_i,\texttt{root},\theta)/m_i$
+            \EndFor
+            \State $\texttt{updateBodies}(\texttt{universe}, \Delta t)$
+            \State $\texttt{freeQuadTree}(\texttt{root})$
+            \State telemetry.append(current positions)
+        \EndFor
+        \Ensure Position history for all bodies stored in telemetry
+    \end{algorithmic}
+\end{algorithm}
+
+\begin{enumerate}
+  \item \textbf{Compute Simulation Bounds.}  
+    We first call
+    \begin{itemize}
+      \item \texttt{computeBounds(const System\&)}  
+        to find an axis-aligned square enclosing all bodies (with a small padding).
+    \end{itemize}
+
+  \item \textbf{Quadtree Construction.}  
+    We represent space by a pointer-based quadtree of \texttt{QuadNode} objects:
+    \begin{itemize}
+      \item \texttt{createRootNode(const Bounds\&)} allocates the root covering the full region.  
+      \item \texttt{insertBody(QuadNode *, Body\&)} recursively subdivides nodes so that each leaf contains at most one body.
+    \end{itemize}
+
+  \item \textbf{Mass–Center Distribution.}  
+    A post-order traversal aggregates mass and center-of-mass at every internal node:
+    \begin{itemize}
+      \item \texttt{computeMassDistribution(QuadNode *)} computes \(\texttt{totalMass}\) and \(\texttt{centerOfMass}\).
+    \end{itemize}
+
+  \item \textbf{Force Computation.}  
+    For each body \(b_i\), we traverse the tree and apply the opening-angle criterion \(\theta\):
+    \begin{itemize}
+      \item \texttt{forceOnBody(const Body\&, QuadNode\*, double theta)}  
+        approximates distant clusters as single masses, or recurses into children when closer.
+    \end{itemize}
+
+  \item \textbf{Parallelization (Shared-Memory).}  
+    To exploit multicore CPUs, we compute forces in parallel:
+    \begin{itemize}
+      \item \texttt{computeForcesParallel(System\&, QuadNode\*, double theta)}  
+        spawns a pool of \texttt{std::thread}s, partitions the bodies into chunks, and each thread calls \texttt{forceOnBody} on its subset.  
+      \item Accelerations are stored per-thread and then written back, avoiding fine-grained locks.
+    \end{itemize}
+
+  \item \textbf{Time Integration.}  
+    Once all accelerations are known, we update velocities and positions in one pass:
+    \begin{itemize}
+      \item \texttt{updateBodies(System\&, double dt)} applies
+      \[
+        \mathbf{v} \gets \mathbf{v} + \mathbf{a}\,\Delta t,\quad
+        \mathbf{x} \gets \mathbf{x} + \mathbf{v}\,\Delta t.
+      \]
+    \end{itemize}
+
+  \item \textbf{Cleanup.}  
+    The quadtree is deallocated to avoid memory leaks:
+    \begin{itemize}
+      \item \texttt{freeQuadTree(QuadNode *)} recursively \texttt{delete}s all nodes.
+    \end{itemize}
+\end{enumerate}
+
+\subsection*{Concurrency Aspects}
+
+\begin{itemize}
+  \item \textbf{Multithreading in C++:} we illustrate basic shared-memory concurrency by partitioning the force computation across threads.  This uses standard \texttt{std::thread} and per-thread buffers, avoiding complex locking.
+  \item \textbf{Concurrent Data Structures:} insertion into the quadtree could be parallelized by feeding bodies into a thread-safe queue; our current version remains serial for clarity but is structured to allow a concurrent \texttt{insertBody} using a mutex per node or a lock-free pointer array.
+  \item \textbf{GPU / PRAM Illustration (Optional):} under \texttt{USE\_CUDA}, we provide \\ \texttt{simulateBruteForceGPU(System\&,double)} which launches an \(O(N^2)\) CUDA kernel.  Each GPU thread computes one body’s net force, demonstrating the PRAM model in practice.
+  \item \textbf{Correctness \& Testing:} we compare parallel results to a single‐threaded reference on small \(N\), and use tools like ThreadSanitizer to detect data races.  Telemetry outputs (positions over time) are also verified for physical invariants (e.g.\ center-of-mass motion).
+\end{itemize}
+
+\appendix
+\newpage
+\section{Appendix: Algorithms}
+
+\subsection{Simple simulation}
 \begin{algorithm}[H]
     \caption{Naive simulation outline}\label{alg:cap}
     \begin{algorithmic}
         \Require System of bodies with masses $m_i$, initial positions $\vec{r}_i$, velocities $\vec{v}_i$
         \Require Time step $\Delta t$, number of steps $N$
-        \State telemetry $\gets \emptyset$
-        \State telemetry.append(initial positions)
         \For{step $\gets 0$ to $N-1$}
             \For{each body $i$}
                 \State $\vec{a}_i \gets \vec{0}$ \Comment{Reset accelerations}
@@ -118,19 +397,82 @@ So far, we have a basic implementation of the naive algorithm without multi thre
                 \State $\vec{v}_i \gets \vec{v}_i + \vec{a}_i\Delta t$ \Comment{Update velocity}
                 \State $\vec{r}_i \gets \vec{r}_i + \vec{v}_i\Delta t$ \Comment{Update position}
             \EndFor
-            \State telemetry.append(current positions)
         \EndFor
-        \Ensure Position history for all bodies stored in telemetry
     \end{algorithmic}
 \end{algorithm}
 
-Other aspects (parallelizing the update steps, parallelizing forces computations, avoiding race conditions) will be implemented later on.
+\begin{algorithm}[H]
+    \caption{Optimized Thread-Parallel N-Body Algorithm}\label{alg:optimized}
+    \begin{algorithmic}[0]
+        \Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
+        \Require Time step $\Delta t$, number of steps $N$, number of threads $T$
+        \State $block\_size \gets n/T$ \Comment{Divide work among threads}
+        \For{step $\gets 0$ to $N-1$}
+            \State // Phase 1: Parallel Force Computation
+            \For{each block $B_t$ of bodies (1 block per thread)}
+                \For{each body $i \in B_t$}
+                    \State Compute forces between body $i$ and all other bodies in system
+                    \State Update $\vec{a}_i$ accordingly
+                \EndFor
+            \EndFor
+            \State Synchronize threads
+            
+            \State // Phase 2: Parallel Position Update
+            \For{each block $B_t$ of bodies (1 block per thread)}
+                \For{each body $i \in B_t$}
+                    \State Update velocity and position using $\vec{a}_i$ and $\Delta t$
+                    \State Store updated position in telemetry array
+                \EndFor
+            \EndFor
+            \State Synchronize threads
+            \State Record positions for current timestep
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
 
-\section{Particle Mesh based algorithm}
+\begin{algorithm}[H]
+    \caption{Optimized N-Body Algorithm with Force Matrix}\label{alg:optimized_matrix}
+    \begin{algorithmic}[0]
+        \Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
+        \Require Time step $\Delta t$, number of steps $N$, number of threads $T$
+        \State Initialize $N \times N$ force matrix $F$ with zero vectors
+        \For{step $\gets 0$ to $N-1$}
+            \State // Phase 1: Parallel Force Matrix Computation
+            \For{each thread $t$}
+                \For{body $i \gets t$ to $N-1$ with stride $T$} \Comment{Round-robin distribution}
+                    \For{body $j \gets 0$ to $i-1$}
+                        \State $F_{ij} \gets$ ComputeGravitationalForce($body_i$, $body_j$)
+                    \EndFor
+                \EndFor
+            \EndFor
+            \State Synchronize threads
+            
+            \State // Phase 2: Parallel Acceleration Computation
+            \For{each block $B_t$ of bodies}
+                \For{each body $i \in B_t$}
+                    \State Sum forces from upper triangle: $\vec{a}_i \gets \sum_{j<i} F_{ij}$
+                    \State Sum forces from lower triangle: $\vec{a}_i \gets \vec{a}_i - \sum_{j>i} F_{ji}$
+                    \State $\vec{a}_i \gets \vec{a}_i/m_i$
+                \EndFor
+            \EndFor
+            \State Synchronize threads
+            
+            \State // Phase 3: Parallel Position Update
+            \For{each block $B_t$ of bodies}
+                \For{each body $i \in B_t$}
+                    \State Update velocity and position using $\vec{a}_i$ and $\Delta t$
+                    \State Store updated position in telemetry array
+                \EndFor
+            \EndFor
+            \State Synchronize threads
+            \State Record positions for current timestep
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
 
-I have implemented a sequential Particle mesh algorithm, as well as a thread based. 
-Here below is the pseudo-code for the sequential implementation as well as for the thread-based implementation. 
-For both implementations the assignment of the mass for each grid was done using a method called the Nearest Grid Point method. This means that the mass was assigned to the grid in which the particle is situated. Other methods for grid-assignment are known such as the "Cloud-In-Cell" or the "Triangle Shaped Cloud" but showed suboptimal results in parallel implementations. 
+\subsection{Barnes Hutt Algorithms}
+
+\subsection{Particle Mesh Algorithm}
 
 \begin{algorithm}[H]
 \caption{Particle-Mesh Simulation, using Nearest-Grid-Point (NGP)}
@@ -266,153 +608,6 @@ For both implementations the assignment of the mass for each grid was done using
 \State Cleanup FFTW plans and memory
 \end{algorithmic}
 \end{algorithm}
-\subsection{Time performance of the particle-mesh simulation (sequential and parallel}
-The simulation where done on MacBook air with M2 chip containing 8 cores.
-All simulations where done with grid size $= 10$, a spatial extent R of $10 000$ and time increment $dt = 0.2$. Additionally, each simulation includes asteroids with high radius for their orbit (between 5 and 3000  as radius)  and the rest being small asteroids with smaller radius for their orbit (between 0.5 and 5 as radius). The reason why I included big differences in radius is to allow between uniformity in the space domain. 
-
-Parallel computation was done through parallelizing via the bodies. Each body's mass was assigned in the grid via multiple threads and the computation of their acceleration was also done through parallelization. 
-
-The Fast Fourier transforms as well as the computation of the potential was not done in parallel since, assigning a thread would have been very inefficient if multiple bodies where assigned on the same grid. Indeed, locking the cells of each grid to avoid race conditions would have given a performance similar to a sequential one. In order to parallelize the computation of the gravitational potential, one needs smaller grids, and therefore divide the space into a higher value of grids. This would however mean higher number of "low-density" grids (grids with no or few bodies inside them) and therefore additional inefficient computation. 
-
-However, one can still implement Fast-Fourier transform in parallel within the library fftw3. Unfortunately, the performance observed was suboptimal. 
-
-\textbf{Time performance of the sequential particle-mesh simulation}
-\begin{table}[ht]
-\centering
-\begin{tabular}{|c|c|}
-\hline
-\textbf{Number of Bodies} & \textbf{Execution Time (ms)} \\
-\hline
-4      & 52   \\
-5      & 54   \\
-50     & 109  \\
-100    & 157  \\
-1,000  & 941  \\
-2,000  & 3,013 \\
-5,000  & 7,331 \\
-10,000 & 14,053 \\
-\hline
-\end{tabular}
-\caption{Execution time of the particle-mesh simulation for varying numbers of bodies ($\text{grid size} = 10$)}
-\label{tab:performance}
-\end{table}
-
-\textbf{Time performance of the parallel particle-mesh simulation}
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|c|c|c|c|}
-\hline
-\textbf{Number of Bodies} & \textbf{Threads = 5} & \textbf{Threads = 7} & \textbf{Threads = 10} \\
-\hline
-4     & 1,661  & --    & --     \\
-5     & 2,209  & 2,848  & 4,058   \\
-50    & 2,295  & 2,906  & 3,263   \\
-100   & 2,298  & 3,034  & 3,165   \\
-1,000  & 3,436  & 3,800  & 5,006   \\
-2,000  & 5,075  & 5,865  & 6,595   \\
-5,000  & 7,576  & 6,244  & 6,757   \\
-10,000 & 18,230 & 12,306 & 13,881  \\
-\hline
-\end{tabular}
-\caption{Execution time (in milliseconds) for varying numbers of bodies and thread counts ($\text{grid size} = 10$).}
-\label{tab:thread_performance}
-\end{table}
-
-Looking at performance we see that until 2000 bodies, sequential time-performance is better than for the parallel implementation. However, for higher number of bodies, the parallel implementation with 7 threads displays better performance. 7 threads is particularly optimal as it is very close to the number of cores in the machine on which we simulate (8 cores), allowing optimal use of the CPU.  
-
-
-
-\section{Barnes–Hut Algorithm}
-
-The Barnes–Hut algorithm reduces the complexity of the classical \(O(N^2)\) N-body force computation to approximately \(O(N\log N)\) by hierarchically clustering distant bodies.  Our implementation follows these main stages:
-
-\begin{algorithm}[H]
-    \caption{Barnes–Hut Simulation Outline}\label{alg:bh}
-    \begin{algorithmic}[1]
-        \Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
-        \Require Time step $\Delta t$, number of steps $N$, opening angle $\theta$
-        \State telemetry $\gets \emptyset$
-        \State telemetry.append(initial positions)
-        \For{step $\gets 0$ \textbf{to} $N-1$}
-            \State $[\texttt{minB},\texttt{maxB}] \gets \texttt{computeBounds}(\texttt{universe})$
-            \State $\texttt{root} \gets \texttt{createRootNode}([\texttt{minB},\texttt{maxB}])$
-            \For{each body $b_i$}
-                \State $\texttt{insertBody}(\texttt{root}, b_i)$
-            \EndFor
-            \State $\texttt{computeMassDistribution}(\texttt{root})$
-            \For{each body $b_i$}
-                \State $\vec{a}_i \gets \texttt{forceOnBody}(b_i,\texttt{root},\theta)/m_i$
-            \EndFor
-            \State $\texttt{updateBodies}(\texttt{universe}, \Delta t)$
-            \State $\texttt{freeQuadTree}(\texttt{root})$
-            \State telemetry.append(current positions)
-        \EndFor
-        \Ensure Position history for all bodies stored in telemetry
-    \end{algorithmic}
-\end{algorithm}
-
-\begin{enumerate}
-  \item \textbf{Compute Simulation Bounds.}  
-    We first call
-    \begin{itemize}
-      \item \texttt{computeBounds(const System\&)}  
-        to find an axis-aligned square enclosing all bodies (with a small padding).
-    \end{itemize}
-
-  \item \textbf{Quadtree Construction.}  
-    We represent space by a pointer-based quadtree of \texttt{QuadNode} objects:
-    \begin{itemize}
-      \item \texttt{createRootNode(const Bounds\&)} allocates the root covering the full region.  
-      \item \texttt{insertBody(QuadNode *, Body\&)} recursively subdivides nodes so that each leaf contains at most one body.
-    \end{itemize}
-
-  \item \textbf{Mass–Center Distribution.}  
-    A post-order traversal aggregates mass and center-of-mass at every internal node:
-    \begin{itemize}
-      \item \texttt{computeMassDistribution(QuadNode *)} computes \(\texttt{totalMass}\) and \(\texttt{centerOfMass}\).
-    \end{itemize}
-
-  \item \textbf{Force Computation.}  
-    For each body \(b_i\), we traverse the tree and apply the opening-angle criterion \(\theta\):
-    \begin{itemize}
-      \item \texttt{forceOnBody(const Body\&, QuadNode\*, double theta)}  
-        approximates distant clusters as single masses, or recurses into children when closer.
-    \end{itemize}
-
-  \item \textbf{Parallelization (Shared-Memory).}  
-    To exploit multicore CPUs, we compute forces in parallel:
-    \begin{itemize}
-      \item \texttt{computeForcesParallel(System\&, QuadNode\*, double theta)}  
-        spawns a pool of \texttt{std::thread}s, partitions the bodies into chunks, and each thread calls \texttt{forceOnBody} on its subset.  
-      \item Accelerations are stored per-thread and then written back, avoiding fine-grained locks.
-    \end{itemize}
-
-  \item \textbf{Time Integration.}  
-    Once all accelerations are known, we update velocities and positions in one pass:
-    \begin{itemize}
-      \item \texttt{updateBodies(System\&, double dt)} applies
-      \[
-        \mathbf{v} \gets \mathbf{v} + \mathbf{a}\,\Delta t,\quad
-        \mathbf{x} \gets \mathbf{x} + \mathbf{v}\,\Delta t.
-      \]
-    \end{itemize}
-
-  \item \textbf{Cleanup.}  
-    The quadtree is deallocated to avoid memory leaks:
-    \begin{itemize}
-      \item \texttt{freeQuadTree(QuadNode *)} recursively \texttt{delete}s all nodes.
-    \end{itemize}
-\end{enumerate}
-
-\subsection*{Concurrency Aspects}
-
-\begin{itemize}
-  \item \textbf{Multithreading in C++:} we illustrate basic shared-memory concurrency by partitioning the force computation across threads.  This uses standard \texttt{std::thread} and per-thread buffers, avoiding complex locking.
-  \item \textbf{Concurrent Data Structures:} insertion into the quadtree could be parallelized by feeding bodies into a thread-safe queue; our current version remains serial for clarity but is structured to allow a concurrent \texttt{insertBody} using a mutex per node or a lock-free pointer array.
-  \item \textbf{GPU / PRAM Illustration (Optional):} under \texttt{USE\_CUDA}, we provide \\ \texttt{simulateBruteForceGPU(System\&,double)} which launches an \(O(N^2)\) CUDA kernel.  Each GPU thread computes one body’s net force, demonstrating the PRAM model in practice.
-  \item \textbf{Correctness \& Testing:} we compare parallel results to a single‐threaded reference on small \(N\), and use tools like ThreadSanitizer to detect data races.  Telemetry outputs (positions over time) are also verified for physical invariants (e.g.\ center-of-mass motion).
-\end{itemize}
-
 
 
 \end{document}

@@ -16,7 +16,7 @@
 #include <random>
 #include <chrono>
 
-#define ASTEROIDS 3000
+#define ASTEROIDS 200
 #define DT 3600. // Not suggested to take a timestep larger than three hours - orbits start getting weird.
 
 int main(int argc, char** argv) {
