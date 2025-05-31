@@ -1,6 +1,9 @@
 #include "core.hpp"
 #include <Magick++.h>
 
+// #define STB_IMAGE_WRITE_IMPLEMENTATION
+// #include "stb_image_write.h"
+
 #include <cmath>
 #include <fstream>
 #include <string>
@@ -133,6 +136,7 @@ std::pair<Vector, Vector> System::exposeBounds() const{
     return getBounds();
 } // to be able to get the bound
 
+
 void System::visualize(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
     const int width = 600;
@@ -216,6 +220,8 @@ void System::visualize(const std::string& name, bool time=true, bool axes=true) 
 // The visualization is not the most important part for multi threading, and we would just
 // like something that works simply and easily for us. The other algorithm implementations
 // will use proper multithreading, as seen in class.
+
+
 void System::visualize2(const std::string& name, bool time=true, bool axes=true) {
     InitializeMagick(nullptr);
     const int width = 600;

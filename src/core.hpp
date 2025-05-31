@@ -3,9 +3,9 @@
 
 #include <vector>
 #include <string>
-#include <Magick++.h>
 using std::string; 
 
+#include <Magick++.h>
 
 // CHANGE THE VIDEO SETTINGS HERE!
 #define STEP_COUNT 15000

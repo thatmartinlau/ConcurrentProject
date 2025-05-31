@@ -38,6 +38,7 @@
 *.fls
 *.log
 
+# Extra temporary files
 *.gif
 *telemetry.csv
 .vs/
