@@ -33,7 +33,12 @@
 
 # TeX stuff
 *.synctex.gz
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
 
+# Extra temporary files
 *.gif
 *telemetry.csv
 .vs/
@@ -41,3 +46,5 @@
 .DS_Store
 *.csv
 *.mp4
+nbody
+nbody_sim_particle_mesh

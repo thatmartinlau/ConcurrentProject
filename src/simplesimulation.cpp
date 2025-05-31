@@ -5,7 +5,7 @@
 
 #define DEBUG false
 
-#define N_THREADS 5
+#define N_THREADS 15
 
 // Basic simulation algorithm for N bodies in a system.
 void naive_simulation(System &universe) {
@@ -216,6 +216,157 @@ void optimized_simulation(System &universe) {
     20 threads: 33278ms
 */
 
+
+/*
+    Proposed new algorithm:
+    Split the simulation step in to 3 parts: filling out the force matrix, computing accelerations, updating step.
+    Force matrix computation Example:
+    N = 5
+    total computations: N(N-1)/2 = 5*4/2 = 10 
+    (we only concern ourselves with the lower triangle, since the matrix is anti symmetric)
+
+       I
+       0   1   2   3   4
+    j  0  f01 f02 f03 f04
+      f10  0  f12 f13 f14
+      f20 f21  0  f23 f24
+      f30 f31 f32  0  f34 
+      f40 f41 f42 f43  0 
+       -----------------
+       a0  a1  a2  a3  a4
+
+    acceleration
+    a_i = sigma_0^4 f_ki (sum of columns)
+
+    Splitting the work, round robin style.
+    2 threads
+    thread 0: handle 0, 2, 4
+    thread 1: handle 1, 3
+    equal workload.
+
+    3 threads:
+    thread 0: handle 0, 3
+    thread 1: handle 1, 4
+    thread 2: handle 2
+
+    inside thread 1:
+    loop int i=0, i < N, i+=thread_id
+    skip 0.
+    at 2: loop from 0 to 2-1: compute fi2 -> store at [0][2], [1][2]
+    at 4: loop from 0 to 4-1: compute fi4 -> store at [0][4], [1][4], [2][4], [3][4]
+
+*/
+
+void better_force_aux(System& universe, 
+                        const int thread_id) {
+    // Better parallelized force computation, without doubled force computations.
+    for (int i = thread_id; i < universe.bodies.size(); i += N_THREADS) {
+        universe.force_matrix[i][i] = Vector(0.,0.);
+        for (int j = 0; j < i ; j++) {
+            Body& body1 = universe.bodies[i];
+            Body& body2 = universe.bodies[j];
+            Vector f = force(body1, body2);
+            // universe.force_matrix[j][i] = f * (-1); // No need to store this
+            universe.force_matrix[i][j] = f; 
+        }
+    }
+}
+
+void compute_accelerations_aux(System& universe, 
+                        const int start, const int end) {
+    for (int i =start; i< end; i++) {
+        Vector acc(0, 0);
+        // Add forces from upper triangle where i is row
+        for (size_t j = 0; j < i; j++) {
+            acc += universe.force_matrix[i][j];
+        }
+        // Add forces from lower triangle where i is column
+        for (size_t j = i+1; j < universe.bodies.size(); j++) {
+            acc -= universe.force_matrix[j][i];
+        }
+        universe.bodies[i].acceleration = acc/universe.bodies[i].m;
+    }
+}
+
+void better_update_aux(System& universe,          // Modify
+                        const int start, const int end, std::vector<Vector>& positions,
+                        const double dt) {
+    // Compute accelerations first
+    // Normally, we don't have any race conditions here.
+    // Then update everything
+    for (int i = start; i < end; i++) {
+        universe.bodies[i].update(dt);
+        positions[i] = universe.bodies[i].coordinates;
+    }
+} 
+
 void optimized_simulationmk2(System& universe) {
-    std::cout << "Not implemented yet.";
+        // Thread initialization
+    const int length = universe.bodies.size();  // This value should be N. 
+    const int block_size = length / N_THREADS;
+    std::vector<std::thread> workers(N_THREADS-1);
+
+
+    // Keep the same initialization as before.
+    universe.telemetry.clear();
+    universe.telemetry.resize(STEP_COUNT+1);
+
+    std::vector<Vector> initial_positions(length); 
+    for (int i = 0; i < length; ++i) {
+        initial_positions[i] = universe.bodies[i].coordinates;
+    }
+    universe.telemetry[0] = initial_positions;
+
+    // Initialize the force matrix;
+    universe.force_matrix.resize(length);
+    for(auto& row : universe.force_matrix) {
+        row.resize(length, Vector(0,0));
+    }
+
+    // Loop through the steps here!
+    for (int step=0; step < STEP_COUNT; ++step) {
+
+        // Inside one step!
+        std::vector<Vector> positions(length); // Pre initialize this this time, to conserve the order.
+
+        // Split body calculation for all the threads, round robin style.
+        for (int i = 0; i<N_THREADS-1; ++i) {
+            workers[i] = std::thread(better_force_aux, std::ref(universe), i);
+        }
+        better_force_aux(universe, N_THREADS-1);
+        for (int i=0; i < N_THREADS-1; ++i) {
+            workers[i].join();
+        }
+
+        // By this point, universe.force_matrix should have all the values of forces stored. 
+        // We just need to update accelerations
+
+        int start_block = 0;
+        for (int i = 0; i<N_THREADS-1; ++i) {
+            int end_block = start_block + block_size;
+            workers[i] = std::thread(compute_accelerations_aux, std::ref(universe),
+                                    start_block, end_block);
+            start_block = end_block;
+        }
+        compute_accelerations_aux(universe, start_block, length);
+        for (int i=0; i<N_THREADS-1;++i) {
+            workers[i].join();
+        }
+
+        start_block = 0;
+        for (int i = 0; i<N_THREADS-1; ++i) {
+            int end_block = start_block + block_size;
+            workers[i] = std::thread(optimized_update_aux, std::ref(universe), 
+                                    start_block, end_block, std::ref(positions), universe.dt);
+            start_block = end_block;
+        }
+        optimized_update_aux(universe, start_block, length, positions, universe.dt);
+        for (int i=0; i < N_THREADS-1; ++i) {
+            workers[i].join();
+        }
+
+        universe.telemetry[step+1] = positions; // This doesn't cause race conditions.
+    }
+    // All steps done, Simulation done.
+
 }

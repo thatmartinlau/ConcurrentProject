@@ -3,9 +3,9 @@
 
 #include <vector>
 #include <string>
-#include <Magick++.h>
 using std::string; 
 
+#include <Magick++.h>
 
 // CHANGE THE VIDEO SETTINGS HERE!
 #define STEP_COUNT 15000
@@ -24,6 +24,7 @@ class Vector {
         Vector operator/(double scalar) const;
         Vector& operator=(const Vector& other);
         void operator+=(const Vector& other);
+        void operator-=(const Vector& other);
         double& operator[](int i) { return data[i]; }
         const double& operator[](int i) const { return data[i]; }
         double norm();
@@ -54,6 +55,9 @@ class System {
         double dt;
         std::vector<Body> bodies;
         std::vector<std::vector<Vector> > telemetry;
+
+        // For Martin's better force compute
+        std::vector<std::vector<Vector>> force_matrix;
 
         void add(Body body);
         void visualize(const std::string& name, bool time, bool axes);

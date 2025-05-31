@@ -16,7 +16,7 @@
 #include <random>
 #include <chrono>
 
-#define ASTEROIDS 105
+#define ASTEROIDS 1000
 #define DT 3600. // Not suggested to take a timestep larger than three hours - orbits start getting weird.
 
 int main(int argc, char** argv) {
@@ -145,8 +145,9 @@ int main(int argc, char** argv) {
 
     universe.dt = DT;
     System universe_multithreaded = universe;
+    System universe_multithreaded2 = universe;
 
-    std::cout << "Starting the simulation...\n";
+    std::cout << "Starting the simulation: " << ASTEROIDS << "asteroids\n";
 
     // Dispatch to the appropriate simulation method: Do a simulation for unoptimized, then one for optimized.
     
@@ -162,6 +163,12 @@ int main(int argc, char** argv) {
         auto end_par = std::chrono::high_resolution_clock::now();
         auto time_taken_par = std::chrono::duration_cast<std::chrono::milliseconds>(end_par - start_par);
         std::cout << "Simulation time parallel: " << time_taken_par.count() << " milliseconds.\n";
+
+        auto start_par2 = std::chrono::high_resolution_clock::now();
+        optimized_simulationmk2(universe_multithreaded2);
+        auto end_par2 = std::chrono::high_resolution_clock::now();
+        auto time_taken_par2 = std::chrono::duration_cast<std::chrono::milliseconds>(end_par2 - start_par2);
+        std::cout << "Simulation2 time parallel: " << time_taken_par2.count() << " milliseconds.\n";
 
     }
     else if (method == "barneshut") {
@@ -232,7 +239,7 @@ int main(int argc, char** argv) {
         string out_name2 = "allplanets_threaded";
         auto start2 = std::chrono::high_resolution_clock::now();
         // universe.visualize2(out_name, false, false);
-        universe_multithreaded.visualize2(out_name2, false , false);
+        // universe_multithreaded2.visualize2(out_name2, false , false);
         auto end2 = std::chrono::high_resolution_clock::now();
         auto time_taken2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
         std::cout << "Visualization time:" << time_taken2.count() << " milliseconds.\n";

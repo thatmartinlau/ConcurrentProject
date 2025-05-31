@@ -27,16 +27,6 @@ nbody_particle:
 		&& ./nbody_sim \
 		&& rm nbody_sim
 
-telemetry: 
-	$(CXX) $(CXXFLAGS) -o telemetry \
-		test_telemetry.cpp \
-		src/core.cpp \
-		src/simplesimulation.cpp \
-		src/barneshutt.cpp \
-		$(LDFLAGS) \
-		&& ./telemetry \
-		&& rm telemetry
-
 .PHONY: clean
 
 clean:
