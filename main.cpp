@@ -16,7 +16,7 @@
 #include <random>
 #include <chrono>
 
-#define ASTEROIDS 1000
+#define ASTEROIDS 3000
 #define DT 3600. // Not suggested to take a timestep larger than three hours - orbits start getting weird.
 
 int main(int argc, char** argv) {
@@ -153,13 +153,13 @@ int main(int argc, char** argv) {
     
     if (method == "naive") {
         auto start_seq = std::chrono::high_resolution_clock::now();
-        naive_simulation(universe);
+        // naive_simulation(universe);
         auto end_seq = std::chrono::high_resolution_clock::now();
         auto time_taken_seq = std::chrono::duration_cast<std::chrono::milliseconds>(end_seq - start_seq);
         std::cout << "Simulation time sequential: " << time_taken_seq.count() << " milliseconds.\n";
 
         auto start_par = std::chrono::high_resolution_clock::now();
-        optimized_simulation(universe_multithreaded);
+        // optimized_simulation(universe_multithreaded);
         auto end_par = std::chrono::high_resolution_clock::now();
         auto time_taken_par = std::chrono::duration_cast<std::chrono::milliseconds>(end_par - start_par);
         std::cout << "Simulation time parallel: " << time_taken_par.count() << " milliseconds.\n";

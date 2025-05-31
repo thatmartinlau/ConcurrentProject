@@ -5,7 +5,7 @@
 
 #define DEBUG false
 
-#define N_THREADS 15
+#define N_THREADS 5
 
 // Basic simulation algorithm for N bodies in a system.
 void naive_simulation(System &universe) {
@@ -196,6 +196,7 @@ void optimized_simulation(System &universe) {
     500 asteroids: 65270ms
     1000 asteroids: 251897ms
     2000 asteroids: 1017985ms 
+    3000 asteroids: 2295012ms (36 minutes LMAO)
 
     Simple parallelized simulation (5 threads)
     10 asteroids: 1732ms (27.5x slower)
@@ -206,6 +207,15 @@ void optimized_simulation(System &universe) {
     500 asteroids: 24611ms (2.49x faster)
     1000 asteroids: 90238ms (2.8x faster)
     2000 asteroids: 342844ms (3x faster)
+    3000 asteroids: 778039ms (3x faster)
+    
+    Better parallelized simulation (5 threads)
+    500 asteroids: 12772ms
+    1000 asteroids: 57094ms
+    2000 asteroids: 212045ms
+    3000 asteroids: 480847ms
+
+
 
     Parameter optimisation: (on 500 asteroids)
     3 threads: 38119ms
@@ -214,6 +224,7 @@ void optimized_simulation(System &universe) {
     6 threads: 26222ms
     10 threads: 30261ms
     20 threads: 33278ms
+    
 */
 
 
