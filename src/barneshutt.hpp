@@ -37,6 +37,7 @@ Vector forceOnBody(const Body& bi, QuadNode* node, double theta);
 
 // Parallel force computation
 void computeForcesParallel(System& universe, QuadNode* root, double theta);
+void computeForcesSerial(System& universe, QuadNode* root, double theta);
 
 // Integrate positions & velocities
 void updateBodies(System& universe, double dt);
@@ -45,6 +46,6 @@ void updateBodies(System& universe, double dt);
 void freeQuadTree(QuadNode* node);
 
 // One step of Barnes–Hut
-void BarnesHutStep(System& universe, double dt, double theta = 0.5);
+void BarnesHutStep(System& universe, double dt, double theta = 0.5, bool useParallel = false);
 
 #endif // BARNES_HUTT_HPP
