@@ -4,16 +4,17 @@ N-body simulation using various methods.
 
 **Project members**: Martin LAU, Ziyue QIU (William), Oscar PEYRON.
 
-## Prerequisites
+## Project Prerequisites
 
 - **C++17** compiler (e.g., g++ 7+)
-- **ImageMagick++** (for GIF visualization)
+- **ImageMagick++** (for image creation)
+- **ffmpeg** (for video creation)
 - **(Optional)** NVIDIA CUDA Toolkit (for GPU mode)
+- **fftw3** Fast Fourier transform
 - **Make** (optional, for convenience)
 
-```
 
-## Building
+## Building 
 
 ### CPU-only executable (naive & Barnes–Hut)
 

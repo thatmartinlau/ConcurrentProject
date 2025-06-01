@@ -5,10 +5,14 @@
 
 #define DEBUG false
 
+// Default threads value
+#ifndef N_THREADS
 #define N_THREADS 5
+#endif
 
 // Basic simulation algorithm for N bodies in a system.
 void naive_simulation(System &universe) {
+    std::cout << "Running naive simulation...\n";
     // Clear the previous telemetries to make sure we're on a blank slate.
     // Record initial positions, so we have a starting frame for the video.
     universe.telemetry.clear();
@@ -130,6 +134,7 @@ void optimized_update_aux(System& universe,          // Modify
 }
 
 void optimized_simulation(System &universe) {
+    std::cout << "Running basic parallelized simulation with " << N_THREADS <<" threads...\n";
 
     // Thread initialization
     const int length = universe.bodies.size();  // This value should be N. 
@@ -269,7 +274,7 @@ void optimized_simulation(System &universe) {
 */
 
 void better_force_aux(System& universe, 
-                        const int thread_id) {
+                        const int thread_id) {    
     // Better parallelized force computation, without doubled force computations.
     for (int i = thread_id; i < universe.bodies.size(); i += N_THREADS) {
         universe.force_matrix[i][i] = Vector(0.,0.);
@@ -312,7 +317,8 @@ void better_update_aux(System& universe,          // Modify
 } 
 
 void optimized_simulationmk2(System& universe) {
-        // Thread initialization
+    std::cout << "Running better parallelized simulation with " << N_THREADS <<" threads...\n";
+    // Thread initialization
     const int length = universe.bodies.size();  // This value should be N. 
     const int block_size = length / N_THREADS;
     std::vector<std::thread> workers(N_THREADS-1);

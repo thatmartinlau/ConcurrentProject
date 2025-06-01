@@ -184,7 +184,7 @@ With these algorithms in hand, we can begin testing. We start with hyper paramet
 27    & 15,646  & 16,650 \\
 \hline
 \end{tabular}
-\caption{Execution time (in milliseconds) for varying numbers thread counts ($\text{N Bodies} = 500$). Tested on Lada SSH computer - Intel Core i7 14700K - lower times is better.}
+\caption{Execution time (in milliseconds) for varying numbers thread counts ($\text{N Bodies} = 500$). Tested on Lada SSH computer - Intel Core i7 14700K - lower times  is better.}
 \label{tab:thread_performance}
 \end{table}
 
@@ -230,7 +230,7 @@ I would also like to include the two tables below having tested my code on my ho
 3,000 & 2,229,012 & 778,039 & 480,847 \\
 \hline
 \end{tabular}
-\caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 13$)Tested on Lada SSH computer - Intel Core i7 14700K - lower times is better.}
+\caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 13$)Tested on Martin's home computer - Intel Core i5 8500 - lower times is better.}
 \label{tab:thread_performance}
 \end{table}
 
@@ -288,30 +288,7 @@ Looking at performance we see that until 2000 bodies, sequential time-performanc
 
 The Barnes–Hut algorithm reduces the complexity of the classical \(O(N^2)\) N-body force computation to approximately \(O(N\log N)\) by hierarchically clustering distant bodies.  Our implementation follows these main stages:
 
-\begin{algorithm}[H]
-    \caption{Barnes–Hut Simulation Outline}\label{alg:bh}
-    \begin{algorithmic}[1]
-        \Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
-        \Require Time step $\Delta t$, number of steps $N$, opening angle $\theta$
-        \State telemetry $\gets \emptyset$
-        \State telemetry.append(initial positions)
-        \For{step $\gets 0$ \textbf{to} $N-1$}
-            \State $[\texttt{minB},\texttt{maxB}] \gets \texttt{computeBounds}(\texttt{universe})$
-            \State $\texttt{root} \gets \texttt{createRootNode}([\texttt{minB},\texttt{maxB}])$
-            \For{each body $b_i$}
-                \State $\texttt{insertBody}(\texttt{root}, b_i)$
-            \EndFor
-            \State $\texttt{computeMassDistribution}(\texttt{root})$
-            \For{each body $b_i$}
-                \State $\vec{a}_i \gets \texttt{forceOnBody}(b_i,\texttt{root},\theta)/m_i$
-            \EndFor
-            \State $\texttt{updateBodies}(\texttt{universe}, \Delta t)$
-            \State $\texttt{freeQuadTree}(\texttt{root})$
-            \State telemetry.append(current positions)
-        \EndFor
-        \Ensure Position history for all bodies stored in telemetry
-    \end{algorithmic}
-\end{algorithm}
+
 
 \begin{enumerate}
   \item \textbf{Compute Simulation Bounds.}  
@@ -474,6 +451,31 @@ The Barnes–Hut algorithm reduces the complexity of the classical \(O(N^2)\) N-
 \end{algorithm}
 
 \subsection{Barnes Hutt Algorithms}
+
+\begin{algorithm}[H]
+    \caption{Barnes–Hut Simulation Outline}\label{alg:bh}
+    \begin{algorithmic}[1]
+        \Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
+        \Require Time step $\Delta t$, number of steps $N$, opening angle $\theta$
+        \State telemetry $\gets \emptyset$
+        \State telemetry.append(initial positions)
+        \For{step $\gets 0$ \textbf{to} $N-1$}
+            \State $[\texttt{minB},\texttt{maxB}] \gets \texttt{computeBounds}(\texttt{universe})$
+            \State $\texttt{root} \gets \texttt{createRootNode}([\texttt{minB},\texttt{maxB}])$
+            \For{each body $b_i$}
+                \State $\texttt{insertBody}(\texttt{root}, b_i)$
+            \EndFor
+            \State $\texttt{computeMassDistribution}(\texttt{root})$
+            \For{each body $b_i$}
+                \State $\vec{a}_i \gets \texttt{forceOnBody}(b_i,\texttt{root},\theta)/m_i$
+            \EndFor
+            \State $\texttt{updateBodies}(\texttt{universe}, \Delta t)$
+            \State $\texttt{freeQuadTree}(\texttt{root})$
+            \State telemetry.append(current positions)
+        \EndFor
+        \Ensure Position history for all bodies stored in telemetry
+    \end{algorithmic}
+\end{algorithm}
 
 \subsection{Particle Mesh Algorithm}
 
