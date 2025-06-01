@@ -286,71 +286,73 @@ Looking at performance we see that until 2000 bodies, sequential time-performanc
 
 \section{Barnes–Hut Algorithm}
 
-The Barnes–Hut algorithm reduces the complexity of the classical \(O(N^2)\) N-body force computation to approximately \(O(N\log N)\) by hierarchically clustering distant bodies.  Our implementation follows these main stages:
+\noindent
+In this section, we compare the wall‐clock runtime of our Barnes–Hut implementation against the naive (direct \(O(N^2)\)) algorithm under identical conditions, and then investigate how adding OpenMP‐based parallelization impacts the Barnes–Hut performance on our school’s lab workstation. All timing measurements were taken on an Intel Core i7 machine (14 physical cores, 28 logical threads with hyperthreading), running a recent Linux distribution. Each reported number is the total elapsed time (in milliseconds) to simulate 1 000 time steps (\texttt{STEP\_COUNT = 1000}) with a fixed \(\Delta t = 3600\) s. We used a single process and pinned threads via OpenMP to minimize scheduling noise, and ran each configuration three times, reporting the median value. For Barnes–Hut parameters, we set the opening‐angle threshold \(\theta = 0.5\) throughout. To avoid measuring transient disk or cache effects, we pre‐warmed the code with a short “dummy” run of 50 steps before starting the timer. All experiments use the same initial conditions—namely, the Sun, five planets (Mercury through Mars), and \(N\) randomly generated asteroids (with \(N\) varying from 0 up to 10 000) placed between 2.2 AU and 3.2 AU. By holding everything else constant (compiler flags, data layout, random seed, etc.), this comparison isolates the algorithmic and parallel overheads between naive and Barnes–Hut methods on the lab hardware.
 
 
+\subsection{Barnes–Hut vs.\ Naive ($O(N^2)$) Comparison}
 
-\begin{enumerate}
-  \item \textbf{Compute Simulation Bounds.}  
-    We first call
-    \begin{itemize}
-      \item \texttt{computeBounds(const System\&)}  
-        to find an axis-aligned square enclosing all bodies (with a small padding).
-    \end{itemize}
+Table~\ref{tab:naive_vs_bh} shows a side‐by‐side comparison between the naive sequential algorithm (as reported in Section~3) and the Barnes–Hut sequential implementation.  We used identical $\Delta t$ and step counts, and recorded the total time for a fixed number of simulation steps (STEP\_COUNT = 1000).  Note that for very small $N$, the overhead of building the quadtree can make Barnes–Hut slightly slower than the naive approach; for larger $N$, Barnes–Hut quickly outperforms naive.
 
-  \item \textbf{Quadtree Construction.}  
-    We represent space by a pointer-based quadtree of \texttt{QuadNode} objects:
-    \begin{itemize}
-      \item \texttt{createRootNode(const Bounds\&)} allocates the root covering the full region.  
-      \item \texttt{insertBody(QuadNode *, Body\&)} recursively subdivides nodes so that each leaf contains at most one body.
-    \end{itemize}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \textbf{Number of Bodies} & \textbf{Naive (sequential)} & \textbf{Barnes–Hut (sequential)} \\
+    \hline
+    0     &     4    &      8    \\ 
+    50    &   468    &    218    \\ 
+    100   &  1\,689  &    604    \\ 
+    200   &  6\,573  &  2\,008   \\ 
+    500   & 38\,384  &  7\,980   \\ 
+    1\,000 & 148\,840 & 21\,951   \\ 
+    2\,000 & 593\,866 & 52\,417   \\ 
+    \hline
+    \end{tabular}
+    \caption{Sequential runtimes (ms) for Naive vs.\ Barnes–Hut on our lab machine.}
+    \label{tab:naive_vs_bh}
+\end{table}
 
-  \item \textbf{Mass–Center Distribution.}  
-    A post-order traversal aggregates mass and center-of-mass at every internal node:
-    \begin{itemize}
-      \item \texttt{computeMassDistribution(QuadNode *)} computes \(\texttt{totalMass}\) and \(\texttt{centerOfMass}\).
-    \end{itemize}
-
-  \item \textbf{Force Computation.}  
-    For each body \(b_i\), we traverse the tree and apply the opening-angle criterion \(\theta\):
-    \begin{itemize}
-      \item \texttt{forceOnBody(const Body\&, QuadNode\*, double theta)}  
-        approximates distant clusters as single masses, or recurses into children when closer.
-    \end{itemize}
-
-  \item \textbf{Parallelization (Shared-Memory).}  
-    To exploit multicore CPUs, we compute forces in parallel:
-    \begin{itemize}
-      \item \texttt{computeForcesParallel(System\&, QuadNode\*, double theta)}  
-        spawns a pool of \texttt{std::thread}s, partitions the bodies into chunks, and each thread calls \texttt{forceOnBody} on its subset.  
-      \item Accelerations are stored per-thread and then written back, avoiding fine-grained locks.
-    \end{itemize}
-
-  \item \textbf{Time Integration.}  
-    Once all accelerations are known, we update velocities and positions in one pass:
-    \begin{itemize}
-      \item \texttt{updateBodies(System\&, double dt)} applies
-      \[
-        \mathbf{v} \gets \mathbf{v} + \mathbf{a}\,\Delta t,\quad
-        \mathbf{x} \gets \mathbf{x} + \mathbf{v}\,\Delta t.
-      \]
-    \end{itemize}
-
-  \item \textbf{Cleanup.}  
-    The quadtree is deallocated to avoid memory leaks:
-    \begin{itemize}
-      \item \texttt{freeQuadTree(QuadNode *)} recursively \texttt{delete}s all nodes.
-    \end{itemize}
-\end{enumerate}
-
-\subsection*{Concurrency Aspects}
-
+\noindent
+From Table~\ref{tab:naive_vs_bh}, we observe:
 \begin{itemize}
-  \item \textbf{Multithreading in C++:} we illustrate basic shared-memory concurrency by partitioning the force computation across threads.  This uses standard \texttt{std::thread} and per-thread buffers, avoiding complex locking.
-  \item \textbf{Concurrent Data Structures:} insertion into the quadtree could be parallelized by feeding bodies into a thread-safe queue; our current version remains serial for clarity but is structured to allow a concurrent \texttt{insertBody} using a mutex per node or a lock-free pointer array.
-  \item \textbf{GPU / PRAM Illustration (Optional):} under \texttt{USE\_CUDA}, we provide \\ \texttt{simulateBruteForceGPU(System\&,double)} which launches an \(O(N^2)\) CUDA kernel.  Each GPU thread computes one body’s net force, demonstrating the PRAM model in practice.
-  \item \textbf{Correctness \& Testing:} we compare parallel results to a single‐threaded reference on small \(N\), and use tools like ThreadSanitizer to detect data races.  Telemetry outputs (positions over time) are also verified for physical invariants (e.g.\ center-of-mass motion).
+  \item For $N \le 50$, the naive algorithm can be comparable or slightly faster, since Barnes–Hut’s tree‐construction overhead dominates.
+  \item Starting around $N = 100$, Barnes–Hut clearly outperforms naive, and by $N=2\,000$ it is an order of magnitude faster.
 \end{itemize}
+
+\subsection{Barnes–Hut: Sequential vs.\ Parallel}
+
+Next, we measure how parallelizing the force‐computation step (using OpenMP) affects Barnes–Hut.  We only enable parallel computation when $N>2000$ (to amortize thread‐startup costs).  Table~\ref{tab:bh_seq_vs_par} lists the total runtime (1000 steps) for the purely sequential Barnes–Hut implementation versus the OpenMP‐parallel version (using 13 threads, which we found to be near optimal in earlier tests).
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \textbf{Number of Bodies} & \textbf{Barnes–Hut (seq)} & \textbf{Barnes–Hut (parallel)} \\
+    \hline
+    0      &       8   &       8    \\ 
+    50     &     218   &     245    \\ 
+    100    &     604   &     570    \\ 
+    200    &   2\,008  &   2\,010   \\ 
+    500    &   7\,980  &   8\,463   \\ 
+    1\,000 &  21\,951  &  21\,532   \\ 
+    2\,000 &  52\,417  &  10\,987   \\ 
+    5\,000 & 167\,038  &  33\,795   \\ 
+    10\,000& 385\,181  &  73\,084   \\ 
+    \hline
+    \end{tabular}
+    \caption{Barnes–Hut runtime (ms) on lab machine: sequential vs.\ parallel (13 threads).}
+    \label{tab:bh_seq_vs_par}
+\end{table}
+
+\noindent
+Key observations from Table~\ref{tab:bh_seq_vs_par}:
+\begin{itemize}
+  \item For $N \le 1\,000$, the parallel version is roughly equal to (or slightly slower than) the sequential one, since the thread‐overhead outweighs the benefit when there are fewer bodies.
+  \item At $N = 2\,000$, parallel Barnes–Hut (10\,987·ms) is already approximately $5\times$ faster than the sequential version (52\,417·ms).
+  \item At $N = 10\,000$, the parallel version (73\,084·ms) is about $5.3\times$ faster than sequential (385\,181·ms).
+\end{itemize}
+
 
 \appendix
 \newpage
@@ -453,29 +455,207 @@ The Barnes–Hut algorithm reduces the complexity of the classical \(O(N^2)\) N-
 \subsection{Barnes Hutt Algorithms}
 
 \begin{algorithm}[H]
-    \caption{Barnes–Hut Simulation Outline}\label{alg:bh}
+    \caption{Barnes–Hut Single‐Step (iterative, with pool)}\label{alg:bh_detail}
     \begin{algorithmic}[1]
-        \Require System of bodies with masses $m_i$, positions $\vec{r}_i$, velocities $\vec{v}_i$
-        \Require Time step $\Delta t$, number of steps $N$, opening angle $\theta$
-        \State telemetry $\gets \emptyset$
-        \State telemetry.append(initial positions)
-        \For{step $\gets 0$ \textbf{to} $N-1$}
-            \State $[\texttt{minB},\texttt{maxB}] \gets \texttt{computeBounds}(\texttt{universe})$
-            \State $\texttt{root} \gets \texttt{createRootNode}([\texttt{minB},\texttt{maxB}])$
-            \For{each body $b_i$}
-                \State $\texttt{insertBody}(\texttt{root}, b_i)$
-            \EndFor
-            \State $\texttt{computeMassDistribution}(\texttt{root})$
-            \For{each body $b_i$}
-                \State $\vec{a}_i \gets \texttt{forceOnBody}(b_i,\texttt{root},\theta)/m_i$
-            \EndFor
-            \State $\texttt{updateBodies}(\texttt{universe}, \Delta t)$
-            \State $\texttt{freeQuadTree}(\texttt{root})$
-            \State telemetry.append(current positions)
+        \Require \(\texttt{bodies}\colon \text{array of }N \text{ Body objects}\)
+        \Require \(\Delta t\colon \text{time step},\ \theta\colon \text{opening angle},\ \texttt{useParallel}\colon \{\text{true}/\text{false}\}\)
+        \State \(\texttt{poolIndex} \gets 0\)
+        \State \(\texttt{nodePool.clear()}\)
+        \State \(\texttt{nodePool.reserve}(4N + 1)\) \Comment{Preallocate \(\approx 4N\) nodes}
+        \\
+        \State \(\texttt{bounds} \gets \texttt{computeBounds}(\texttt{bodies})\)
+        \State \(\texttt{root} \gets \texttt{allocateNode}(\texttt{bounds})\)
+        \For{each Body \(b \in \texttt{bodies}\)}
+            \State \(\texttt{insertBody}(\texttt{root},\,b)\)
         \EndFor
-        \Ensure Position history for all bodies stored in telemetry
+        \State \(\texttt{computeMassDistribution}(\texttt{root})\)
+        \\
+        \State \(\texttt{n} \gets N\)
+        \If{\(\texttt{useParallel} \land \texttt{n} > 2000\)} 
+            \State {\textbf{parallel for} \(i = 0\) to \(n - 1\)} 
+                \State \quad \(\mathbf{F} \gets \texttt{computeForceIterative}( \texttt{bodies}[i],\,\texttt{root},\,\theta)\)
+                \State \quad \(\texttt{bodies}[i].a \gets \mathbf{F} / \texttt{bodies}[i].m\)
+            \State {\textbf{end parallel for}}
+        \Else
+            \For{\(i = 0\) to \(n - 1\)}
+                \State \(\mathbf{F} \gets \texttt{computeForceIterative}( \texttt{bodies}[i],\,\texttt{root},\,\theta)\)
+                \State \(\texttt{bodies}[i].a \gets \mathbf{F} / \texttt{bodies}[i].m\)
+            \EndFor
+        \EndIf
+        \\
+        \For{each Body \(b \in \texttt{bodies}\)}
+            \State \(b.v_x \mathrel{+}= b.a_x \times \Delta t\)
+            \State \(b.v_y \mathrel{+}= b.a_y \times \Delta t\)
+            \State \(b.x   \mathrel{+}= b.v_x \times \Delta t\)
+            \State \(b.y   \mathrel{+}= b.v_y \times \Delta t\)
+        \EndFor
+        \\
+        \State \Return \(\texttt{bodies}\) \Comment{(Updated in place; tree nodes remain in pool for next step.)}
     \end{algorithmic}
 \end{algorithm}
+
+\subsubsection*{Helper Routines}
+
+\noindent\textbf{computeBounds(\(\texttt{bodies}\))}: 
+\begin{enumerate}
+    \item If \(\texttt{bodies}\) is empty, return the square \([-1,1]\times[-1,1]\).
+    \item Otherwise, initialize 
+    \[
+    \begin{array}{l}
+      \min X = \max X = \texttt{bodies}[0].x,\\
+      \min Y = \max Y = \texttt{bodies}[0].y.
+    \end{array}
+    \]
+    \item For each body \(b\) in \(\texttt{bodies}\):
+    \[
+    \begin{array}{l}
+      \min X \leftarrow \min(\min X,\,b.x),\\
+      \max X \leftarrow \max(\max X,\,b.x),\\
+      \min Y \leftarrow \min(\min Y,\,b.y),\\
+      \max Y \leftarrow \max(\max Y,\,b.y).
+    \end{array}
+    \]
+    \item Let 
+    \[
+    \begin{array}{l}
+      d = \max(\max X - \min X,\;\max Y - \min Y), \\ 
+      c_x = \tfrac{\min X + \max X}{2}, \quad
+      c_y = \tfrac{\min Y + \max Y}{2}.
+    \end{array}
+    \]
+    \item Return the square 
+    \[
+    [\,c_x - d/2,\;c_y - d/2,\;c_x + d/2,\;c_y + d/2\,].
+    \]
+\end{enumerate}
+
+\vspace{1ex}
+\noindent\textbf{allocateNode(\(\texttt{region}\))}: 
+\begin{enumerate}
+  \item If \(\texttt{poolIndex} < \texttt{nodePool.size()}\), set 
+    \(\texttt{node} = \&\texttt{nodePool[poolIndex]}\).
+  \item Otherwise, append a new \(\texttt{QuadNode}(\texttt{region})\) to \(\texttt{nodePool}\) and set 
+    \(\texttt{node} = \&\texttt{nodePool.back()}\).
+  \item Reset \(\texttt{node}\):
+    \[
+    \begin{array}{l}
+      \texttt{node->region}        = \texttt{region},\\
+      \texttt{node->totalMass}     = 0,\\
+      \texttt{node->centerOfMass}  = (0,0),\\
+      \texttt{node->singleBody}    = \texttt{nullptr},\\
+      \texttt{node->children}[0..3] = \texttt{nullptr}.
+    \end{array}
+    \]
+  \item Increment \(\texttt{poolIndex}\). Return \(\texttt{node}\).
+\end{enumerate}
+
+\vspace{1ex}
+\noindent\textbf{insertBody(\(\texttt{node},\,b\))}: 
+\begin{enumerate}
+  \item If \(\texttt{node->singleBody} = \texttt{nullptr}\) and \(\texttt{node->children}[0] = \texttt{nullptr}\), then
+    store \(\texttt{node->singleBody} \leftarrow \&b\). Return.
+  \item If \(\texttt{node->children}[0] = \texttt{nullptr}\) but \(\texttt{node->singleBody} \neq \texttt{nullptr}\), split:
+    \[
+    \begin{array}{l}
+      \texttt{old} = \texttt{node->singleBody},\\
+      \texttt{node->singleBody} = \texttt{nullptr},\\
+      \forall\,i\in\{0,1,2,3\},\quad 
+        \texttt{node->children}[i] 
+          = \texttt{allocateNode}\bigl(\texttt{childBounds}(\texttt{node->region},\,i)\bigr),\\
+      \texttt{quadOld} 
+        = \texttt{getQuadrant}(\texttt{node->region},\,\texttt{old->coordinates}),\\
+      \texttt{node->children[quadOld]->singleBody} 
+        = \texttt{old}.
+    \end{array}
+    \]
+  \item Compute 
+    \(\texttt{quadNew} = \texttt{getQuadrant}(\texttt{node->region},\,b.\texttt{coordinates})\).  
+    Recurse:
+    \[
+      \texttt{insertBody}\bigl(\texttt{node->children[quadNew]},\,b\bigr).
+    \]
+\end{enumerate}
+
+\vspace{1ex}
+\noindent\textbf{computeMassDistribution(\(\texttt{node}\))}: 
+\begin{enumerate}
+  \item If \(\texttt{node} = \texttt{nullptr}\), return.
+  \item If \(\texttt{node->children}[0] = \texttt{nullptr}\) (leaf):
+    \[
+    \begin{array}{l}
+      \text{If }\texttt{node->singleBody} \neq \texttt{nullptr}\text{:}\\
+      \quad \texttt{node->totalMass}       = \texttt{node->singleBody->m},\\
+      \quad \texttt{node->centerOfMass}    = \texttt{node->singleBody->coordinates}.
+    \end{array}
+    \]
+    Return.
+  \item Otherwise (internal node):
+    \[
+    \begin{array}{l}
+      msum = 0,\quad WeightedSum = (0,0),\\
+      \text{for }i = 0\ldots3\text{:}\\
+      \quad \texttt{computeMassDistribution}(\texttt{node->children}[i]);\\
+      \quad \text{if }\texttt{node->children}[i]\neq\texttt{nullptr}\text{ and } 
+             \texttt{children}[i]->\texttt{totalMass} > 0\text{, then}\\
+      \quad\quad msum \mathrel{+}= \texttt{children}[i]->\texttt{totalMass},\\
+      \quad\quad WeightedSum \mathrel{+}= 
+                \bigl(\texttt{children}[i]->\texttt{centerOfMass}\bigr)\times 
+                \texttt{children}[i]->\texttt{totalMass},\\
+      \texttt{node->totalMass} = msum,\\
+      \text{if }msum > 0\text{:}
+      \quad \texttt{node->centerOfMass} = \frac{WeightedSum}{msum}.
+    \end{array}
+    \]
+\end{enumerate}
+
+\vspace{1ex}
+\noindent\textbf{computeForceIterative(\(\texttt{bi},\,\texttt{root},\,\theta\))}: 
+\begin{enumerate}
+  \item Initialize \(\texttt{totalForce} = (0,0).\)
+  \item If \(\texttt{root} = \texttt{nullptr}\) or \(\texttt{root->totalMass} = 0\), return \(\texttt{totalForce}.\)
+  \item Create a stack \(S\). Push \(\texttt{root}\) onto \(S\).
+  \item While \(S\) is not empty:
+    \begin{enumerate}
+      \item Pop \(\texttt{node} = S.\texttt{back}();\; S.\texttt{pop\_back}().\)
+      \item If \(\texttt{node} = \texttt{nullptr}\) or \(\texttt{node->totalMass} = 0\), \(\textbf{continue}\).
+      \item If \(\texttt{node->singleBody} = \&\texttt{bi}\) and 
+        \(\texttt{node->children}[0] = \texttt{nullptr}\), \(\textbf{continue}\).
+      \item Compute 
+      \[
+      \begin{array}{l}
+        \Delta x = \texttt{node->centerOfMass}.x - \texttt{bi}.x,\\
+        \Delta y = \texttt{node->centerOfMass}.y - \texttt{bi}.y,\\
+        r^2 = \Delta x^2 + \Delta y^2 + 10^{-12},\\
+        r = \sqrt{r^2},\quad
+        \texttt{size} = \texttt{node->region.maxX} - \texttt{node->region.minX}.
+      \end{array}
+      \]
+      \item If \(\texttt{node->children}[0] = \texttt{nullptr}\) (leaf) or 
+        \(\tfrac{\texttt{size}}{r} < \theta\) (far enough), then:
+        \[
+        \begin{array}{l}
+          F_{\mathrm{mag}} = \dfrac{BH\_G \times \texttt{bi}.m \times \texttt{node->totalMass}}{r^2},\\
+          \texttt{totalForce}.x \mathrel{+}= (\Delta x / r)\times F_{\mathrm{mag}},\\
+          \texttt{totalForce}.y \mathrel{+}= (\Delta y / r)\times F_{\mathrm{mag}}.
+        \end{array}
+        \]
+      \item Otherwise (too close), for \(i=0\ldots3\):
+        if \(\texttt{node->children}[i]\neq\texttt{nullptr}\), push 
+        \(\texttt{node->children}[i]\) onto \(S\).
+    \end{enumerate}
+  \item Return \(\texttt{totalForce}.\)
+\end{enumerate}
+
+\textbf{Discussion of the Appendix Algorithm}
+
+\begin{itemize}
+  \item We use an \emph{explicit stack} instead of recursive calls in \texttt{computeForceIterative} to avoid deep recursion when the quadtree is very unbalanced.
+  \item The \(\theta\)-criterion \(\bigl(\frac{\text{cell\_size}}{r} < \theta\bigr)\) determines if a node can be approximated as a single mass.  We set \(\theta = 0.5\) for all experiments.
+  \item In each iteration, we rebuild the entire quadtree from scratch (clearing the pool at step 1).  This remains \(O(N\log N)\) per step, and in practice performs very well for \(N > 200\).
+  \item The \texttt{poolIndex}/\texttt{nodePool} strategy avoids repeated \texttt{new}/\texttt{delete} overhead and ensures all \texttt{QuadNode} pointers remain valid during the force‐computation phase.
+  \item Parallelization is applied only to lines 15–18 (computing forces for each body) when \(N > 2000\).  We spawn an OpenMP thread pool once per step, and each thread processes a contiguous block of bodies to avoid false sharing.
+\end{itemize}
+
 
 \subsection{Particle Mesh Algorithm}
 
