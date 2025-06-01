@@ -139,6 +139,15 @@ void computeForcesParallel(System& universe, QuadNode* root, double theta) {
         universe.bodies[i].acceleration = F[i] / universe.bodies[i].m;
 }
 
+void computeForcesSerial(System& universe, QuadNode* root, double theta) {
+    int n = universe.bodies.size();
+    for (int i = 0; i < n; ++i) {
+        Vector f = forceOnBody(universe.bodies[i], root, theta);
+        universe.bodies[i].acceleration.data[0] = f.data[0] / universe.bodies[i].m;
+        universe.bodies[i].acceleration.data[1] = f.data[1] / universe.bodies[i].m;
+    }
+}
+
 // 6. Update all bodies' positions and velocities in parallel
 void updateBodies(System& universe, double dt) {
     int n = universe.bodies.size();
@@ -156,13 +165,17 @@ void freeQuadTree(QuadNode* node) {
 }
 
 // Wrapper: do one full Barnes–Hut step (build, force, update, cleanup)
-void BarnesHutStep(System& universe, double dt, double theta) {
+void BarnesHutStep(System& universe, double dt, double theta, bool useParallel) {
     Bounds b = computeBounds(universe);                 // get bounds
     QuadNode* root = createRootNode(b);                 // new root
     for(auto& c : universe.bodies)                      // insert each body
         insertBody(root, c);
     computeMassDistribution(root);                       // compute mass at each node
-    computeForcesParallel(universe, root, theta);        // parallel force
+    if (useParallel) {
+        computeForcesParallel(universe, root, theta);
+    } else {
+        computeForcesSerial(universe, root, theta);
+    }
     updateBodies(universe, dt);                          // update positions
     freeQuadTree(root);                                  // delete tree
 }
