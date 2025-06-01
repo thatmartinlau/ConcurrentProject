@@ -243,14 +243,17 @@ Another point of interest is the performance difference between both parallel im
 \section{Particle Mesh based algorithm}
 
 I have implemented a sequential Particle mesh algorithm, as well as a thread based. 
-Here below is the pseudo-code for the sequential implementation as well as for the thread-based implementation. 
+In the annexe below is the pseudo-code for the sequential implementation as well as for the thread-based implementation. 
 For both implementations the assignment of the mass for each grid was done using a method called the Nearest Grid Point method. This means that the mass was assigned to the grid in which the particle is situated. Other methods for grid-assignment are known such as the "Cloud-In-Cell" or the "Triangle Shaped Cloud" but showed suboptimal results in parallel implementations. 
-
-\subsection{Time performance of the particle-mesh simulation (sequential and parallel}
+Assigning mass in to a space is lated used for the computation of the gravitational potential, which is essential to compute forces between the bodies(particles).
+\subsection{Time performance of the particle-mesh simulation (sequential and parallel) and benchmarking}
 The simulation where done on MacBook air with M2 chip containing 8 cores.
-All simulations where done with grid size $= 10$, a spatial extent R of $10 000$ and time increment $dt = 0.2$. Additionally, each simulation includes asteroids with high radius for their orbit (between 5 and 3000  as radius)  and the rest being small asteroids with smaller radius for their orbit (between 0.5 and 5 as radius). The reason why I included big differences in radius is to allow between uniformity in the space domain. 
+All simulations where done with grid size $= 10$, a spatial extent R of $10 000$ and time increment $dt = 0.2$. Additionally, each simulation includes asteroids with high radius for their orbit (between 5 and 3000  as radius)  and the rest being small asteroids with smaller radius for their orbit (between 0.5 and 5 as radius). 
+The reason why I included big differences in radius is to allow between uniformity in the space domain. 
+The code to simulate my particlemesh implementation is included in the mainparticlemesh.cpp file and is structured similarly to the main.cpp.
+However, instead of the main mass to be the Sun, the central mass is 900 kg. 
 
-Parallel computation was done through parallelizing via the bodies. Each body's mass was assigned in the grid via multiple threads and the computation of their acceleration was also done through parallelization. 
+Parallel computation was done through parallelizing via the bodies for the mass assignment, the computation of the accelation as well as for the update step. Each body's mass was assigned in the grid via multiple threads and the computation of their acceleration was also done through parallelization. 
 
 The Fast Fourier transforms as well as the computation of the potential was not done in parallel since, assigning a thread would have been very inefficient if multiple bodies where assigned on the same grid. Indeed, locking the cells of each grid to avoid race conditions would have given a performance similar to a sequential one. In order to parallelize the computation of the gravitational potential, one needs smaller grids, and therefore divide the space into a higher value of grids. This would however mean higher number of "low-density" grids (grids with no or few bodies inside them) and therefore additional inefficient computation. 
 
