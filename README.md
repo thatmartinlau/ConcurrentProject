@@ -21,7 +21,7 @@ N-body simulation using various methods.
 ```bash
 # 1. Compile sources
 g++ -std=c++17 -O3 -I./src \
-    -c src/core.cpp src/simplesimulation.cpp src/barneshutt.cpp main.cpp mainparticlemesh.cpp
+    -c src/core.cpp src/simplesimulation.cpp src/barneshutt.cpp main.cpp 
 
 # 2. Link into executable
 g++ -O3 \
@@ -29,11 +29,24 @@ g++ -O3 \
     -o nbody_cpu $(Magick++-config --cppflags --cxxflags --ldflags --libs)
 ```
 
+### CPU-only executable (Particle mesh)
+```bash
+# 1. Compile sources
+g++ -std=c++17 -O3 -I./src \
+  -c src/core.cpp src/simplesimulation.cpp src/particlemesh_thread.cpp src/particlemesh.cpp mainparticlemesh.cpp
+
+# 2. Link into executable
+g++ -O3 \
+    core.o simplesimulation.o particlemesh_thread.o particlemesh.o mainparticlemesh.o \
+    -o nbodyparticlemesh_cpu $(Magick++-config --cppflags --cxxflags --ldflags --libs)
+```
+
+
 ### GPU-enabled executable (brute-force PRAM style)
 
 ```bash
 nvcc -std=c++14 -O3 -Xcompiler "-std=c++17 -I./src" -DUSE_CUDA \
-    src/core.cpp src/simplesimulation.cpp src/barneshutt.cpp main.cpp mainparticlemesh.cpp \
+    src/core.cpp src/simplesimulation.cpp src/barneshutt.cpp main.cpp  \
     -o nbody_gpu $(Magick++-config --cppflags --cxxflags --ldflags --libs) -lcudart
 ```
 
@@ -51,6 +64,12 @@ All executables accept a `-method=` flag to select the simulation algorithm:
 
 # Barnes–Hut CPU
 ./nbody_cpu -method=barneshut
+
+#Particle-mesh sequential
+./nbodyparticlemesh_cpu -method=particlemesh
+
+#Particle-mesh parallel
+./nbodyparticlemesh_cpu -method=particlemesh_thread
 
 # Barnes–Hut GPU brute‑force
 ./nbody_gpu -method=barneshut_gpu
