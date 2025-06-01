@@ -21,7 +21,7 @@ N-body simulation using various methods.
 ```bash
 # 1. Compile sources
 g++ -std=c++17 -O3 -I./src \
-    -c src/core.cpp src/simplesimulation.cpp src/barneshutt.cpp main.cpp
+    -c src/core.cpp src/simplesimulation.cpp src/barneshutt.cpp main.cpp mainparticlemesh.cpp
 
 # 2. Link into executable
 g++ -O3 \
@@ -33,7 +33,7 @@ g++ -O3 \
 
 ```bash
 nvcc -std=c++14 -O3 -Xcompiler "-std=c++17 -I./src" -DUSE_CUDA \
-    src/core.cpp src/simplesimulation.cpp src/barneshutt.cpp main.cpp \
+    src/core.cpp src/simplesimulation.cpp src/barneshutt.cpp main.cpp mainparticlemesh.cpp \
     -o nbody_gpu $(Magick++-config --cppflags --cxxflags --ldflags --libs) -lcudart
 ```
 
