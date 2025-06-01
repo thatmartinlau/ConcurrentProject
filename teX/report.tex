@@ -59,7 +59,7 @@ The work has been split as follows. The arrangement is not defining, as we like 
 \begin{enumerate}
     \item Martin handles general project structure, core classes, visualization, and the naive and its optimized algorithm implementation.
     \item Ziyue handles the Barnes Hutt algorithm.
-    \item Oscar handles the Particle Mesh algorithm implementation (simple, thread based and cuda implementation) % @Oscar, is the cuda implementation still there? Else, remove the bit on it.
+    \item Oscar handles the Particle Mesh algorithm implementation (simple and thread) 
 \end{enumerate}
 
 
@@ -257,7 +257,7 @@ Parallel computation was done through parallelizing via the bodies for the mass 
 
 The Fast Fourier transforms as well as the computation of the potential was not done in parallel since, assigning a thread would have been very inefficient if multiple bodies where assigned on the same grid. Indeed, locking the cells of each grid to avoid race conditions would have given a performance similar to a sequential one. In order to parallelize the computation of the gravitational potential, one needs smaller grids, and therefore divide the space into a higher value of grids. This would however mean higher number of "low-density" grids (grids with no or few bodies inside them) and therefore additional inefficient computation. 
 
-However, one can still implement Fast-Fourier transform in parallel within the library fftw3. Unfortunately, the performance observed was suboptimal. 
+Testing parallel implementation  of the Fast-Fourier using the library in fftw3 gave suboptimal performance for all the benchmarks (number of bodies equal to 4,5, 50, 100, 1 000, 2 000, 5 000 and 10,000)
 
 \textbf{Time performance of the parallel particle-mesh simulation}
 \begin{table}[htbp]
@@ -276,7 +276,7 @@ However, one can still implement Fast-Fourier transform in parallel within the l
 10,000 & 14,053  & 18,230 & 12,306 & 13,881  \\
 \hline
 \end{tabular}
-\caption{Execution time (in milliseconds) for varying numbers of bodies and thread counts ($\text{grid size} = 10$).}
+\caption{Execution time (in milliseconds) for varying numbers of bodies and thread counts ($\text{grid size} = 10$). Tested on MacBook Air M2 - 8 cores CPU}
 \label{tab:thread_performance}
 \end{table}
 
