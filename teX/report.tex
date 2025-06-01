@@ -242,10 +242,10 @@ Another point of interest is the performance difference between both parallel im
 
 \section{Particle Mesh based algorithm}
 
-I have implemented a sequential Particle mesh algorithm, as well as a thread based. 
-In the annexe below is the pseudo-code for the sequential implementation as well as for the thread-based implementation. 
-For both implementations the assignment of the mass for each grid was done using a method called the Nearest Grid Point method. This means that the mass was assigned to the grid in which the particle is situated. Other methods for grid-assignment are known such as the "Cloud-In-Cell" or the "Triangle Shaped Cloud" but showed suboptimal results in parallel implementations. 
-Assigning mass in to a space is lated used for the computation of the gravitational potential, which is essential to compute forces between the bodies(particles).
+In this project, I implemented both a sequential and a thread-based version of the Particle-Mesh algorithm. The pseudo-code for each implementation is provided in the appendix. In both cases, the mass assignment to the grid was performed using the Nearest Grid Point (NGP) method, which assigns the entire mass of each particle to the closest grid point. While more advanced methods such as Cloud-In-Cell (CIC) and Triangle-Shaped Cloud (TSC) exist and offer smoother mass distributions, they demonstrated suboptimal performance in the parallel implementation due to increased computational overhead and more complex memory access patterns.
+
+The mass-assignment step is crucial, as it defines the spatial mass density on the grid, which is then used to compute the gravitational potential via a discretized Poisson equation. This potential is in turn used to calculate the forces acting on each particle. The choice of mass-assignment scheme thus has a direct impact on both the physical accuracy and computational efficiency of the simulation, particularly in a multi-threaded environment.
+
 \subsection{Time performance of the particle-mesh simulation (sequential and parallel) and benchmarking}
 The simulation where done on MacBook air with M2 chip containing 8 cores.
 All simulations where done with grid size $= 10$, a spatial extent R of $10 000$ and time increment $dt = 0.2$. Additionally, each simulation includes asteroids with high radius for their orbit (between 5 and 3000  as radius)  and the rest being small asteroids with smaller radius for their orbit (between 0.5 and 5 as radius). 
@@ -280,8 +280,11 @@ Testing parallel implementation  of the Fast-Fourier using the library in fftw3 
 \label{tab:thread_performance}
 \end{table}
 
-Looking at performance we see that until 2000 bodies, sequential time-performance is better than for the parallel implementation. However, for higher number of bodies, the parallel implementation with 7 threads displays better performance. 7 threads is particularly optimal as it is very close to the number of cores in the machine on which we simulate (8 cores), allowing optimal use of the CPU.  
+A key trend observed is that for small-scale simulations (up to 2,000 bodies), the sequential implementation consistently outperforms the parallel versions. This is due to the overhead associated with thread creation, synchronization, and memory contention, which dominates the limited computational workload. As the number of bodies increases, the performance of the sequential implementation deteriorates more rapidly than the parallel versions, and an equal performance is observed around 2,000 bodies where the parallel execution becomes advantageous.
 
+Among the tested thread counts, using 7 threads consistently yields the best parallel performance at larger scales (5,000 and 10,000 bodies), outperforming both the sequential implementation and other thread configurations. This is likely due to 7 threads closely matching the number of physical cores available (8), allowing for optimal CPU utilization while leaving one core for system processes. In contrast, using 10 threads often leads to performance degradation, as it oversubscribes the CPU, causing increased context switching and cache contention. Using only 5 threads underutilizes the available cores, resulting in suboptimal speedups.
+
+Overall, the results demonstrate that while the particle-mesh simulation does not benefit from parallelization at small scales, it achieves significant performance gains for larger problem sizes when using an appropriately tuned number of threads. The optimal parallel configuration is thus highly dependent on both the problem size and the underlying hardware architecture.
 
 
 \section{Barnes–Hut Algorithm}

@@ -21,8 +21,8 @@
 
 int main(int argc, char** argv) {
     // Default choice of method
-    std::string method = "particlemesh_thread";
-    //std::string method =  "particlemesh";
+    //std::string method = "particlemesh_thread";
+    std::string method =  "particlemesh";
     // Parse args for different methods
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
