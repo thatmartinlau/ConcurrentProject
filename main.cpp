@@ -189,7 +189,6 @@ int main(int argc, char** argv) {
         int grid_size = 100; // added this 
         // particle_mesh_simulation(universe, dt,grid_size);
     }
-    #endif
     else {
         std::cerr << "Unknown method “" << method << "”\n";
         return 1;
