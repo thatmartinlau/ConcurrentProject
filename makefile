@@ -34,8 +34,20 @@ bs:
 		src/simplesimulation.cpp \
 		src/barneshutt.cpp \
 		$(LDFLAGS)
-	./nbody_bs -method=barneshut
+	@echo "==== Running Barnes-Hut (serial) ===="
+	OMP_NUM_THREADS=13 ./nbody_bs -method=barneshut
 	rm -f nbody_bs
+
+bsp:
+	$(CXX) $(CXXFLAGS) -o nbody_bsp \
+		main.cpp \
+		src/core.cpp \
+		src/simplesimulation.cpp \
+		src/barneshutt.cpp \
+		$(LDFLAGS)
+	@echo "==== Running Barnes-Hut (parallel, 13 threads) ===="
+	OMP_NUM_THREADS=13 ./nbody_bsp -method=barneshut -parallel
+	rm -f nbody_bsp
 
 
 .PHONY: clean
