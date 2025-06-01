@@ -172,15 +172,22 @@ int main(int argc, char** argv) {
 
     }
     else if (method == "barneshut") {
-        // BarnesHut(universe, DT);
+        universe.telemetry.clear();
+        {
+            std::vector<Vector> init;
+            for (auto& b : universe.bodies) init.push_back(b.coordinates);
+            universe.telemetry.push_back(init);
+        }
+        for (int step = 0; step < STEP_COUNT; ++step) {
+            BarnesHutStep(universe, universe.dt, 0.5);
+            std::vector<Vector> frame;
+            for (auto& b : universe.bodies) frame.push_back(b.coordinates);
+            universe.telemetry.push_back(frame);
+        }
     }
     else if (method == "particlemesh"){
         int grid_size = 100; // added this 
         // particle_mesh_simulation(universe, dt,grid_size);
-    }
-    #ifdef USE_CUDA
-    else if (method == "gpu") {
-        simulateBruteForceGPU(universe, DT);
     }
     #endif
     else {

@@ -2,52 +2,49 @@
 #define BARNES_HUTT_HPP
 
 #include <vector>
-#include <utility>
-#include "core.hpp"    // Body, System, Vector
+#include "core.hpp"
 
-// Spatial bounds for quadtree region
+// Axis-aligned bounding box
 struct Bounds {
     double minX, maxX;
     double minY, maxY;
 };
 
-// Quadtree node for Barnes–Hut algorithm
+// Quadtree node for Barnes–Hut
 struct QuadNode {
-    Bounds region;               // spatial extent of this node
-    double totalMass;            // total mass in this node
-    Vector centerOfMass;         // center-of-mass of bodies in this node
-    Body* singleBody;            // non-nullptr if leaf containing exactly one body
-    QuadNode* children[4];       // NW=0, NE=1, SW=2, SE=3
+    Bounds region;
+    double totalMass;
+    Vector centerOfMass;
+    Body* singleBody;
+    QuadNode* children[4];
 
     QuadNode(const Bounds& r);
     ~QuadNode();
 };
 
-// Compute the axis-aligned bounding box for all bodies
-std::pair<Bounds, Bounds> computeBounds(const System& universe);
+// Compute simulation bounds
+Bounds computeBounds(const System& universe);
 
-// Quadtree construction
+// Build quadtree
 QuadNode* createRootNode(const Bounds& bounds);
 void insertBody(QuadNode* node, Body& body);
 
-// Compute mass distribution (post-order traversal)
+// Aggregate mass & center-of-mass
 void computeMassDistribution(QuadNode* node);
 
-// Force calculation using Barnes–Hut opening angle theta
+// Compute force on a body via BH
 Vector forceOnBody(const Body& bi, QuadNode* node, double theta);
 
-// Parallel force computation (shared-memory)
+// Parallel force computation
 void computeForcesParallel(System& universe, QuadNode* root, double theta);
 
-// Time integration (velocity & position updates)
+// Integrate positions & velocities
 void updateBodies(System& universe, double dt);
 
-// Cleanup quadtree memory
+// Cleanup the quadtree
 void freeQuadTree(QuadNode* node);
 
-// GPU brute-force PRAM illustration
-#ifdef USE_CUDA
-void simulateBruteForceGPU(System& universe, double dt);
-#endif
+// One step of Barnes–Hut
+void BarnesHutStep(System& universe, double dt, double theta = 0.5);
 
 #endif // BARNES_HUTT_HPP

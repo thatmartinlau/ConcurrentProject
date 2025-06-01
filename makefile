@@ -27,6 +27,17 @@ nbody_particle:
 		&& ./nbody_sim \
 		&& rm nbody_sim
 
+bs:
+	$(CXX) $(CXXFLAGS) -o nbody_bs \
+		main.cpp \
+		src/core.cpp \
+		src/simplesimulation.cpp \
+		src/barneshutt.cpp \
+		$(LDFLAGS)
+	./nbody_bs -method=barneshut
+	rm -f nbody_bs
+
+
 .PHONY: clean
 
 clean:
