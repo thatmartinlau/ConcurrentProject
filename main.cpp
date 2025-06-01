@@ -22,12 +22,17 @@
 int main(int argc, char** argv) {
     // Default choice of method
     std::string method = "naive";
+    bool useParallelBH = false;
+
     // Parse args for different methods
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         const std::string prefix = "-method=";
         if (arg.rfind(prefix, 0) == 0) {
             method = arg.substr(prefix.size());
+        }
+        else if (arg == "-parallel") {
+            useParallelBH = true;
         }
     }
 
@@ -181,7 +186,7 @@ int main(int argc, char** argv) {
             universe.telemetry.push_back(init);
         }
         for (int step = 0; step < STEP_COUNT; ++step) {
-            BarnesHutStep(universe, universe.dt, 0.5);
+            BarnesHutStep(universe, universe.dt, 0.5, useParallelBH);
             std::vector<Vector> frame;
             for (auto& b : universe.bodies) frame.push_back(b.coordinates);
             universe.telemetry.push_back(frame);
@@ -250,7 +255,7 @@ int main(int argc, char** argv) {
         string out_name = "allplanets_nonthreaded";
         string out_name2 = "allplanets_threaded";
         auto start2 = std::chrono::high_resolution_clock::now();
-        // universe.visualize2(out_name, false, false);
+        universe.visualize2(out_name, false, false);
         // universe_multithreaded2.visualize2(out_name2, false , false);
         auto end2 = std::chrono::high_resolution_clock::now();
         auto time_taken2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
