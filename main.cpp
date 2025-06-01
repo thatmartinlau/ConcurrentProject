@@ -172,6 +172,8 @@ int main(int argc, char** argv) {
 
     }
     else if (method == "barneshut") {
+        auto start_barneshut = std::chrono::high_resolution_clock::now();
+        
         universe.telemetry.clear();
         {
             std::vector<Vector> init;
@@ -184,6 +186,10 @@ int main(int argc, char** argv) {
             for (auto& b : universe.bodies) frame.push_back(b.coordinates);
             universe.telemetry.push_back(frame);
         }
+        
+        auto end_barneshut = std::chrono::high_resolution_clock::now();
+        auto time_taken_barneshut = std::chrono::duration_cast<std::chrono::milliseconds>(end_barneshut - start_barneshut);
+        std::cout << "Barnes-Hut simulation time: " << time_taken_barneshut.count() << " milliseconds.\n";
     }
     else if (method == "particlemesh"){
         int grid_size = 100; // added this 
