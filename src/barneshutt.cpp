@@ -1,181 +1,235 @@
+#include "core.hpp"
 #include "barneshutt.hpp"
+
+#ifdef G
+#undef G
+#endif
+
+#include <vector>
 #include <cmath>
+#include <cstddef>
 #include <omp.h>
 
-// QuadNode constructor: set bounds and init members
-QuadNode::QuadNode(const Bounds& r)
-    : region(r), totalMass(0), centerOfMass(0,0), singleBody(nullptr) {
-    // children are set to nullptr
-    for(int i=0; i<4; ++i) children[i] = nullptr;
-}
-// QuadNode destructor: nothing special
-QuadNode::~QuadNode() {}
+static constexpr double BH_G = 6.67430e-11;
 
-// 1. Compute bounds from system telemetry (just calls exposeBounds)
-Bounds computeBounds(const System& universe) {
-    // get min and max positions
-    auto [minV, maxV] = universe.exposeBounds();
-    // return as Bounds struct
-    return { minV.data[0], maxV.data[0], minV.data[1], maxV.data[1] };
+// Node pool stores all QuadNode objects for one step, so we don’t keep new/delete calls.
+static std::vector<QuadNode> nodePool;
+static std::size_t poolIndex = 0;
+
+// QuadNode just sets its region; other fields will be filled in later.
+QuadNode::QuadNode(const Bounds& b)
+    : region(b), totalMass(0.0), centerOfMass(0.0, 0.0), singleBody(nullptr) {
+    children[0] = children[1] = children[2] = children[3] = nullptr;
 }
 
-// Helper: decide which quadrant a vector v belongs to inside bounds b
-static int quadrant(const Bounds& b, const Vector& v) {
-    double mx = 0.5 * (b.minX + b.maxX); // mid x
-    double my = 0.5 * (b.minY + b.maxY); // mid y
-    bool east = v.data[0] > mx;   // is to the right?
-    bool north = v.data[1] > my;  // is above?
-    if(north) return east ? 1 : 0; // NE : NW
-    else      return east ? 3 : 2; // SE : SW
-}
-// Helper: get bounds for a child quadrant index q
-static Bounds childBounds(const Bounds& b, int q) {
-    double mx = 0.5 * (b.minX + b.maxX);
-    double my = 0.5 * (b.minY + b.maxY);
-    switch(q) {
-      case 0: return { b.minX, mx,    my,    b.maxY }; // NW
-      case 1: return { mx,    b.maxX, my,    b.maxY }; // NE
-      case 2: return { b.minX, mx,    b.minY, my   }; // SW
-      case 3: return { mx,    b.maxX, b.minY, my   }; // SE
-      default: return b; // fallback
+// Grab a node from the pool (reuse if possible, or add a new one).
+QuadNode* allocateNode(const Bounds& region) {
+    QuadNode* node;
+    if (poolIndex < nodePool.size()) {
+        node = &nodePool[poolIndex];
+    } else {
+        nodePool.emplace_back(region);
+        node = &nodePool.back();
     }
+    // Reset fields
+    node->region = region;
+    node->totalMass = 0.0;
+    node->centerOfMass = Vector(0.0, 0.0);
+    node->singleBody = nullptr;
+    for (int i = 0; i < 4; ++i) {
+        node->children[i] = nullptr;
+    }
+    poolIndex++;
+    return node;
 }
 
-// 2a. Create a new root node for the quadtree
-QuadNode* createRootNode(const Bounds& bounds) {
-    return new QuadNode(bounds);
+// Find the smallest square that contains all bodies (centered).
+Bounds computeBounds(const std::vector<Body>& bodies) {
+    Bounds b;
+    if (bodies.empty()) {
+        // If no bodies, just return a default square
+        b.minX = b.minY = -1.0;
+        b.maxX = b.maxY =  1.0;
+        return b;
+    }
+    // Start with the first body’s position
+    b.minX = b.maxX = bodies[0].coordinates.data[0];
+    b.minY = b.maxY = bodies[0].coordinates.data[1];
+    for (const auto& c : bodies) {
+        double x = c.coordinates.data[0];
+        double y = c.coordinates.data[1];
+        if (x < b.minX) b.minX = x;
+        if (x > b.maxX) b.maxX = x;
+        if (y < b.minY) b.minY = y;
+        if (y > b.maxY) b.maxY = y;
+    }
+    // Make it a square, keeping the same center
+    double dx = b.maxX - b.minX;
+    double dy = b.maxY - b.minY;
+    double d = (dx > dy ? dx : dy);
+    double cx = 0.5 * (b.minX + b.maxX);
+    double cy = 0.5 * (b.minY + b.maxY);
+    b.minX = cx - 0.5 * d;
+    b.maxX = cx + 0.5 * d;
+    b.minY = cy - 0.5 * d;
+    b.maxY = cy + 0.5 * d;
+    return b;
 }
-// 2b. Insert a body into the quadtree rooted at node
+
+// Figure out which quadrant a point belongs to:
+//  0 = NE, 1 = NW, 2 = SW, 3 = SE
+int getQuadrant(const Bounds& region, const Vector& pos) {
+    double midX = 0.5 * (region.minX + region.maxX);
+    double midY = 0.5 * (region.minY + region.maxY);
+    bool right = (pos.data[0] > midX);
+    bool top   = (pos.data[1] > midY);
+    if (right && top)        return 0; // NE
+    if (!right && top)       return 1; // NW
+    if (!right && !top)      return 2; // SW
+    return 3;                        // SE
+}
+
+// Given a parent region, get the bounds for its child quadrant
+Bounds childBounds(const Bounds& b, int quad) {
+    double midX = 0.5 * (b.minX + b.maxX);
+    double midY = 0.5 * (b.minY + b.maxY);
+    switch (quad) {
+        case 0: return Bounds{midX, midY, b.maxX, b.maxY}; // NE
+        case 1: return Bounds{b.minX, midY, midX, b.maxY}; // NW
+        case 2: return Bounds{b.minX, b.minY, midX, midY}; // SW
+        case 3: return Bounds{midX, b.minY, b.maxX, midY}; // SE
+    }
+    return b; // should never reach here
+}
+
+// Insert a Body into the quadtree node.
+// If the node is empty leaf, just store the body there.
+// If it already has one, split into 4 children and re-insert.
 void insertBody(QuadNode* node, Body& body) {
-    // if node is empty leaf (no body and no children), place body here
-    if(!node->singleBody && !node->children[0]) {
+    if (node->singleBody == nullptr && node->children[0] == nullptr) {
         node->singleBody = &body;
         return;
     }
-    // if leaf has one body, subdivide into 4 children
-    if(node->singleBody) {
-        Body* old = node->singleBody; // existing body
-        node->singleBody = nullptr;   // clear this leaf
-        // create children nodes
-        for(int i=0; i<4; ++i)
-            node->children[i] = new QuadNode(childBounds(node->region, i));
-        // re-insert old body into appropriate child
-        int qOld = quadrant(node->region, old->coordinates);
-        insertBody(node->children[qOld], *old);
+    if (node->children[0] == nullptr) {
+        // Need to split this leaf because it already has one body
+        Bounds b = node->region;
+        Body* existing = node->singleBody;
+        node->singleBody = nullptr;
+        for (int i = 0; i < 4; ++i) {
+            node->children[i] = allocateNode(childBounds(b, i));
+        }
+        int quadOld = getQuadrant(b, existing->coordinates);
+        node->children[quadOld]->singleBody = existing;
     }
-    // now insert the new body into correct child
-    int q = quadrant(node->region, body.coordinates);
-    // if child does not exist, create it
-    if(!node->children[q]) 
-        node->children[q] = new QuadNode(childBounds(node->region, q));
-    insertBody(node->children[q], body);
+    // Not an empty leaf anymore, so recurse into the right child
+    int quadNew = getQuadrant(node->region, body.coordinates);
+    insertBody(node->children[quadNew], body);
 }
 
-// 3. Compute mass and center-of-mass for each node (post-order)
+// Compute totalMass and centerOfMass from the leaves up:
+// If it’s a leaf with a body, just use that body.
+// Otherwise combine children’s masses and centers.
 void computeMassDistribution(QuadNode* node) {
-    if(!node) return; // nothing to do
-    bool leaf = !node->children[0]; // if no children, it's leaf
-    if(leaf) {
-        // if leaf has a body, set mass and center-of-mass
-        if(node->singleBody) {
-            node->totalMass    = node->singleBody->m;
+    if (!node) return;
+    if (node->children[0] == nullptr) {
+        if (node->singleBody) {
+            node->totalMass = node->singleBody->m;
             node->centerOfMass = node->singleBody->coordinates;
         }
         return;
     }
-    // not a leaf: sum over children
-    double msum = 0;
-    Vector cm(0,0);
-    for(int i=0; i<4; ++i) {
-        if(node->children[i]) {
-            computeMassDistribution(node->children[i]); // recurse
-            double m = node->children[i]->totalMass;
-            msum += m;
-            cm += node->children[i]->centerOfMass * m; // weighted sum
+    // Internal node: first do children
+    double msum = 0.0;
+    Vector weightedSum(0.0, 0.0);
+    for (int i = 0; i < 4; ++i) {
+        computeMassDistribution(node->children[i]);
+        if (node->children[i] && node->children[i]->totalMass > 0) {
+            msum += node->children[i]->totalMass;
+            weightedSum.data[0] += node->children[i]->centerOfMass.data[0] * node->children[i]->totalMass;
+            weightedSum.data[1] += node->children[i]->centerOfMass.data[1] * node->children[i]->totalMass;
         }
     }
     node->totalMass = msum;
-    if(msum > 0)
-        node->centerOfMass = cm / msum; // divide to get COM
-}
-
-// 4. Compute force on body bi from the quadtree node
-Vector forceOnBody(const Body& bi, QuadNode* node, double theta) {
-    Vector zero(0,0);
-    if(!node || node->totalMass == 0) return zero; // no force
-    // if this node is the same body and a leaf, skip
-    if(node->singleBody == &bi && !node->children[0]) return zero;
-    // vector from bi to node's center-of-mass
-    Vector d = node->centerOfMass - bi.coordinates;
-    double r2 = d.data[0]*d.data[0] + d.data[1]*d.data[1] + 1e-12;
-    double r  = std::sqrt(r2);
-    double size = node->region.maxX - node->region.minX;
-    // if leaf or far enough (size/r < theta), treat as one body
-    if(!node->children[0] || size/r < theta) {
-        double f = G * bi.m * node->totalMass / r2; // magnitude
-        // return force vector
-        return Vector(d.data[0]/r * f, d.data[1]/r * f);
-    }
-    // otherwise, sum forces from children
-    Vector sum(0,0);
-    for(int i=0; i<4; ++i) {
-        if(node->children[i])
-            sum += forceOnBody(bi, node->children[i], theta);
-    }
-    return sum;
-}
-
-// 5. Compute forces for all bodies in parallel
-void computeForcesParallel(System& universe, QuadNode* root, double theta) {
-    int n = universe.bodies.size();
-    std::vector<Vector> F(n);
-    // for each body i, compute F[i] in parallel
-    #pragma omp parallel for schedule(dynamic)
-    for(int i=0; i<n; ++i)
-        F[i] = forceOnBody(universe.bodies[i], root, theta);
-    // write back accelerations in parallel
-    #pragma omp parallel for schedule(dynamic)
-    for(int i=0; i<n; ++i)
-        universe.bodies[i].acceleration = F[i] / universe.bodies[i].m;
-}
-
-void computeForcesSerial(System& universe, QuadNode* root, double theta) {
-    int n = universe.bodies.size();
-    for (int i = 0; i < n; ++i) {
-        Vector f = forceOnBody(universe.bodies[i], root, theta);
-        universe.bodies[i].acceleration.data[0] = f.data[0] / universe.bodies[i].m;
-        universe.bodies[i].acceleration.data[1] = f.data[1] / universe.bodies[i].m;
+    if (msum > 0.0) {
+        node->centerOfMass.data[0] = weightedSum.data[0] / msum;
+        node->centerOfMass.data[1] = weightedSum.data[1] / msum;
     }
 }
 
-// 6. Update all bodies' positions and velocities in parallel
-void updateBodies(System& universe, double dt) {
-    int n = universe.bodies.size();
-    #pragma omp parallel for schedule(dynamic)
-    for(int i=0; i<n; ++i)
-        universe.bodies[i].update(dt);
+Vector computeForceIterative(const Body& bi, QuadNode* root, double theta) {
+    Vector total(0.0, 0.0);
+    if (!root || root->totalMass == 0.0) return total;
+    std::vector<QuadNode*> stack;
+    stack.reserve(64);
+    stack.push_back(root);
+    while (!stack.empty()) {
+        QuadNode* node = stack.back();
+        stack.pop_back();
+        if (!node || node->totalMass == 0.0) continue;
+        if (node->singleBody == &bi && node->children[0] == nullptr) continue;
+        double dx = node->centerOfMass.data[0] - bi.coordinates.data[0];
+        double dy = node->centerOfMass.data[1] - bi.coordinates.data[1];
+        double r2 = dx*dx + dy*dy + 1e-12; // avoid divide-by-zero
+        double r  = std::sqrt(r2);
+        double size = node->region.maxX - node->region.minX;
+        if (node->children[0] == nullptr || (size / r) < theta) {
+            double forceMag = BH_G * bi.m * node->totalMass / r2;
+            total.data[0] += dx / r * forceMag;
+            total.data[1] += dy / r * forceMag;
+        } else {
+            for (int i = 0; i < 4; ++i) {
+                if (node->children[i]) {
+                    stack.push_back(node->children[i]);
+                }
+            }
+        }
+    }
+    return total;
 }
 
-// 7. Recursively delete quadtree nodes
-void freeQuadTree(QuadNode* node) {
-    if(!node) return; // nothing
-    for(int i=0; i<4; ++i)
-        freeQuadTree(node->children[i]); // recurse
-    delete node; // free this node
-}
+void BarnesHutStep(std::vector<Body>& bodies, double dt, double theta, bool useParallel) {
+    // 1) Set up the pool
+    poolIndex = 0;
+    nodePool.clear();
+    nodePool.reserve(bodies.size() * 4 + 1); // roughly 4N nodes
 
-// Wrapper: do one full Barnes–Hut step (build, force, update, cleanup)
-void BarnesHutStep(System& universe, double dt, double theta, bool useParallel) {
-    Bounds b = computeBounds(universe);                 // get bounds
-    QuadNode* root = createRootNode(b);                 // new root
-    for(auto& c : universe.bodies)                      // insert each body
+    // 2) Find bounding box
+    Bounds b = computeBounds(bodies);
+
+    // 3) Take one node from the pool as root
+    QuadNode* root = allocateNode(b);
+
+    // 4) Insert every body into the tree
+    for (auto& c : bodies) {
         insertBody(root, c);
-    computeMassDistribution(root);                       // compute mass at each node
-    if (useParallel) {
-        computeForcesParallel(universe, root, theta);
-    } else {
-        computeForcesSerial(universe, root, theta);
     }
-    updateBodies(universe, dt);                          // update positions
-    freeQuadTree(root);                                  // delete tree
+
+    // 5) Compute masses and centers
+    computeMassDistribution(root);
+
+    int n = static_cast<int>(bodies.size());
+
+    // 6) Compute accelerations (parallel if big enough)
+    if (useParallel && n > 2000) {
+        #pragma omp parallel for schedule(static)
+        for (int i = 0; i < n; ++i) {
+            Vector f = computeForceIterative(bodies[i], root, theta);
+            bodies[i].acceleration.data[0] = f.data[0] / bodies[i].m;
+            bodies[i].acceleration.data[1] = f.data[1] / bodies[i].m;
+        }
+    } else {
+        for (int i = 0; i < n; ++i) {
+            Vector f = computeForceIterative(bodies[i], root, theta);
+            bodies[i].acceleration.data[0] = f.data[0] / bodies[i].m;
+            bodies[i].acceleration.data[1] = f.data[1] / bodies[i].m;
+        }
+    }
+
+    // 7) Update velocities & positions
+    for (auto& c : bodies) {
+        c.velocity.data[0] += c.acceleration.data[0] * dt;
+        c.velocity.data[1] += c.acceleration.data[1] * dt;
+        c.coordinates.data[0] += c.velocity.data[0] * dt;
+        c.coordinates.data[1] += c.velocity.data[1] * dt;
+    }
 }
