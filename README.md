@@ -65,14 +65,14 @@ All executables accept a `-method=` flag to select the simulation algorithm:
 # Barnes–Hut CPU
 ./nbody_cpu -method=barneshut
 
+# Barnes–Hut GPU brute‑force
+./nbody_gpu -method=barneshut_gpu
+
 #Particle-mesh sequential
 ./nbodyparticlemesh_cpu -method=particlemesh
 
 #Particle-mesh parallel
 ./nbodyparticlemesh_cpu -method=particlemesh_thread
-
-# Barnes–Hut GPU brute‑force
-./nbody_gpu -method=barneshut_gpu
 ```
 
-Each run will produce a GIF (e.g., `naive_simulation.gif`, `barneshut_simulation.gif`, or `gpu_simulation.gif`) in the working directory.
+Each run will produce a GIF (e.g., `naive_simulation.gif`, `barneshut_simulation.gif`, or `gpu_simulation.gif` or `particle_mesh.gif` or `particle_mesh_thread.gif`) in the working directory.
