@@ -14,7 +14,33 @@ N-body simulation using various methods.
 - **Make** (optional, for convenience)
 
 
-## Building 
+## Express build and run
+
+```bash
+# Basic simulation with default parameters
+make nbody
+
+# Customize simulation parameters
+make nbody NTHREADS=13 VISUALIZE=true PRINT_TELEMETRY=true EXPORT_CSV=true
+
+```
+
+Available Make Parameters
+
+    NTHREADS: Number of threads to use (default: 5)
+    VISUALIZE: Generate visualization (default: false)
+    PRINT_TELEMETRY: Print simulation data to console (default: false)
+    EXPORT_CSV: Export simulation data to CSV (default: false)
+
+Make Targets
+
+    nbody: Run basic N-body simulation
+    nbody_particle: Run particle mesh simulation
+    bs: Run Barnes-Hut serial implementation
+    bsp: Run Barnes-Hut parallel implementation (13 threads)
+
+
+## Manual Build 
 
 ### CPU-only executable (naive & Barnes–Hut)
 
