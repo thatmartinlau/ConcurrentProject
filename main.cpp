@@ -177,24 +177,31 @@ int main(int argc, char** argv) {
 
     }
     else if (method == "barneshut") {
-        auto start_barneshut = std::chrono::high_resolution_clock::now();
-        
+        auto start_bh = std::chrono::high_resolution_clock::now();
+
         universe.telemetry.clear();
         {
             std::vector<Vector> init;
-            for (auto& b : universe.bodies) init.push_back(b.coordinates);
+            for (auto& b : universe.bodies)
+                init.push_back(b.coordinates);
             universe.telemetry.push_back(init);
         }
+
         for (int step = 0; step < STEP_COUNT; ++step) {
-            BarnesHutStep(universe, universe.dt, 0.5, useParallelBH);
+            BarnesHutStep(universe.bodies, universe.dt, 0.5, useParallelBH);
+
             std::vector<Vector> frame;
-            for (auto& b : universe.bodies) frame.push_back(b.coordinates);
+            for (auto& b : universe.bodies) {
+                frame.push_back(b.coordinates);
+            }
             universe.telemetry.push_back(frame);
         }
-        
-        auto end_barneshut = std::chrono::high_resolution_clock::now();
-        auto time_taken_barneshut = std::chrono::duration_cast<std::chrono::milliseconds>(end_barneshut - start_barneshut);
-        std::cout << "Barnes-Hut simulation time: " << time_taken_barneshut.count() << " milliseconds.\n";
+
+        auto end_bh = std::chrono::high_resolution_clock::now();
+        auto time_bh =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end_bh - start_bh);
+        std::cout << "Barnes-Hut simulation time: "
+                  << time_bh.count() << " milliseconds.\n";
     }
     else if (method == "particlemesh"){
         int grid_size = 100; // added this 
