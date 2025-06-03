@@ -253,39 +253,49 @@ The reason why I included big differences in radius is to allow between uniformi
 The code to simulate my particlemesh implementation is included in the mainparticlemesh.cpp file and is structured similarly to the main.cpp.
 However, instead of the main mass to be the Sun, the central mass is 900 kg. 
 
-Parallel computation was done through parallelizing via the bodies for the mass assignment, the computation of the accelation as well as for the update step. Each body's mass was assigned in the grid via multiple threads and the computation of their acceleration was also done through parallelization. 
+Parallel computation was implemented by parallelizing across the bodies during the mass assignment, acceleration computation, and update steps. Each body's mass was assigned to the grid using multiple threads, and their acceleration was also computed in parallel. 
+
+Each thread was assigned a number of bodies denoted by \( \mathit{bodies\_per\_thread} \), which was computed as:
+\begin{equation}
+    \mathit{bodies\_per\_thread} = \frac{\mathit{total\_bodies}}{\mathit{num\_threads}}
+\end{equation}
+
+
 
 The Fast Fourier transforms as well as the computation of the potential was not done in parallel since, assigning a thread would have been very inefficient if multiple bodies where assigned on the same grid. Indeed, locking the cells of each grid to avoid race conditions would have given a performance similar to a sequential one. In order to parallelize the computation of the gravitational potential, one needs smaller grids, and therefore divide the space into a higher value of grids. This would however mean higher number of "low-density" grids (grids with no or few bodies inside them) and therefore additional inefficient computation. 
 
 Testing parallel implementation  of the Fast-Fourier using the library in fftw3 gave suboptimal performance for all the benchmarks (number of bodies equal to 4,5, 50, 100, 1 000, 2 000, 5 000 and 10,000)
 
 \textbf{Time performance of the parallel particle-mesh simulation}
-\begin{table}[htbp]
+\begin{table}[h!]
 \centering
-\begin{tabular}{|c|c|c|c|c|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
 \hline
-\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Threads = 5} & \textbf{Threads = 7} & \textbf{Threads = 10} \\
+\textbf{\# Bodies} & \textbf{Seq (ms)} & \textbf{1 Thread (ms)} & \textbf{2 Threads (ms)} & \textbf{3 Threads (ms)} & \textbf{4 Threads (ms)} & \textbf{5 Threads (ms)} & \textbf{7 Threads (ms)} & \textbf{10 Threads (ms)} & \textbf{Best Speedup (×)} \\
 \hline
-4      & 52    & 1,661  & --    & --     \\
-5      & 54    & 2,209  & 2,848  & 4,058   \\
-50     & 109   & 2,295  & 2,906  & 3,263   \\
-100    & 157   & 2,298  & 3,034  & 3,165   \\
-1,000  & 941   & 3,436  & 3,800  & 5,006   \\
-2,000  & 3,013  & 5,075  & 5,865  & 6,595   \\
-5,000  & 7,331  & 7,576  & 6,244  & 6,757   \\
-10,000 & 14,053  & 18,230 & 12,306 & 13,881  \\
+4      & 52     & 560    & 1,180  & 1,477  & 1,865  & 1,698  & --     & --     & 0.04 \\
+5      & 54     & 487    & 1,244  & 1,488  & 1,397  & 2,209  & 2,848  & 4,058  & 0.04 \\
+50     & 109    & 509    & 992    & 1,242  & 1,505  & 2,295  & 2,906  & 3,263  & 0.11 \\
+100    & 157    & 560    & 1,021  & 1,283  & 1,518  & 2,298  & 3,034  & 3,165  & 0.15 \\
+1,000  & 941    & 1,657    & 2,099  & 2,282  & 2,447  & 3,436  & 3,800  & 5,006  & 0.45 \\
+2,000  & 3,013  & 2,918    & 3,190  & 3,650  & 3,456  & 5,075  & 5,865  & 6,595  & 0.94 \\
+5,000  & 7,331  & 5,965    & 6,448  & 6,851  & 6,508  & 7,576  & 6,244  & 6,757  & 1.17 \\
+10,000 & 14,053 & 10,528    & 11,260 & 11,876 & 10,876 & 18,230 & 12,306 & 13,881 & 1.29 \\
 \hline
-\end{tabular}
-\caption{Execution time (in milliseconds) for varying numbers of bodies and thread counts ($\text{grid size} = 10$). Tested on MacBook Air M2 - 8 cores CPU}
-\label{tab:thread_performance}
+\end{tabular}%
+}
+\caption{Execution time and best speedup for varying numbers of bodies and thread counts ($\text{grid size} = 10$). Tested on MacBook Air M2 – 8-core CPU.}
+\label{tab:best_speedup}
 \end{table}
 
-A key trend observed is that for small-scale simulations (up to 2,000 bodies), the sequential implementation consistently outperforms the parallel versions. For instance, with only 4 bodies, the sequential time is 52 ms, while with 5 threads it's 1,661 ms (a 32x slowdown). This is due to the overhead associated with thread creation, synchronization, and memory contention, which dominates the limited computational workload. As the number of bodies increases, the performance of the sequential implementation deteriorates more rapidly than the parallel versions, and an equal performance is observed around 2,000 bodies where the parallel execution becomes advantageous.
 
-Among the tested thread counts, using 7 threads consistently yields the best parallel performance at larger scales (5,000 and 10,000 bodies), outperforming both the sequential implementation and other thread configurations. This is likely due to 7 threads closely matching the number of physical cores available (8), allowing for optimal CPU utilization while leaving one core for system processes. In contrast, using 10 threads often leads to performance degradation, as it oversubscribes the CPU, causing increased context switching and cache contention. Using only 5 threads underutilizes the available cores, resulting in suboptimal speedups.
+A key trend observed is that for small-scale simulations (up to 2,000 bodies), the sequential implementation consistently outperforms the parallel versions. For instance, with only 4 bodies, the sequential time is 52 ms, while with 5 threads it's 1,698 ms (a 32x slowdown). This is due to the overhead associated with thread creation, synchronization, and memory contention, which dominates the limited computational workload. As the number of bodies increases, the performance of the sequential implementation deteriorates more rapidly than the parallel versions, and an equal performance is observed around 2,000 bodies where the parallel execution becomes advantageous.
 
-Overall, the results demonstrate that while the particle-mesh simulation does not benefit from parallelization at small scales, it achieves significant performance gains for larger problem sizes when using an appropriately tuned number of threads. The optimal parallel configuration is thus highly dependent on both the problem size and the underlying hardware architecture.
+Among the tested thread counts, using 1, 2 or 4 threads consistently yields the best parallel performance at larger scales (5,000 and 10,000 bodies), outperforming both the sequential implementation and other thread configurations. 
+For instance, for 10,000 bodies the sequential implementation achieves the simulation in 14,053 ms while the parallel implementation with 4 threads runs in 10,876 ms (a 1.29x speed up).
 
+Overall, the results demonstrate that while the particle-mesh simulation does not benefit from parallelization at small scales, it achieves significant performance gains for larger problem sizes when using an appropriately tuned number of threads. 
 
 \section{Barnes–Hut Algorithm}
 

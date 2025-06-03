@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     std::uniform_real_distribution<double> close_dist_dist(0.5, 5.0);  // avoid too small radii
     std::uniform_real_distribution<double> close_angle_dist(0.0, 2 * M_PI);
 
-    for (int i = 0; i <2; ++i) {
+    for (int i = 0; i <9995; ++i) {
     double mass = close_mass_dist(gen);
     double distance = close_dist_dist(gen);
     double angle = close_angle_dist(gen);
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
     Vector velocity(-velocity_magnitude * sin(angle), velocity_magnitude * cos(angle));
     std::string name = "InnerAsteroid " + std::to_string(i);
     Body close_asteroid(mass, position, velocity, "gray", 1, name);
-    //universe.add(close_asteroid);
+    universe.add(close_asteroid);
     }
 
     double dt = 0.2; // fuck it, one hour
@@ -122,41 +122,69 @@ int main(int argc, char** argv) {
         double R = 10000; 
         particle_mesh_simulation(universe, dt, grid_size, R);
     }else if (method == "particlemesh_thread"){
-        int grid_size = 10; //bodies = 4
-        size_t num_threads = 5; //1661 milliseconds 
+        int grid_size = 10;
+         //bodies = 4
+        size_t num_threads = 1;// 1180 ms
+        //size_t num_threads = 3;// 1477 ms
+        //size_t num_threads = 4;// 1865 ms //
+        //size_t num_threads = 5; //2200 milliseconds 
 
-       // int grid_size = 10; //bodies = 5
+
+
+
+         //bodies = 5
+        //size_t num_threads = 2;//1244 ms 
+        //size_t num_threads = 3;// 1488
+        //size_t num_threads = 4;//  1397
         //size_t num_threads = 5; //2209 milliseconds 
         //size_t num_threads = 7;  //2848 miliseconds
         //size_t num_threads = 10; //4058 milliseconds
 
-        //int grid_size = 10; //bodies = 50//
+        //bodies = 50//
+        //size_t num_threads = 2;//992 ms 
+        //size_t num_threads = 3;// 1488
+        //size_t num_threads = 4;//  1505
         //size_t num_threads = 5; //  2295 milliseconds 
         //size_t num_threads = 7; //2906 milliseconds 
         //size_t num_threads = 10; //  3263 milliseconds
 
-        //int grid_size = 10; //bodies = 100;
+         //bodies = 100;
+         //size_t num_threads = 2;//1021 ms 
+        //size_t num_threads = 3;// 1488
+        //size_t num_threads = 4;//  1505
         //size_t num_threads = 5; // 2298 milliseconds
         //size_t num_threads = 7; //3034 milliseconds 
        //size_t num_threads = 10; //3165 milliseconds
 
-        //int grid_size = 10; //bodies = 1000;
+         //bodies = 1000;
+        //size_t num_threads = 2;//2099 ms 
+        //size_t num_threads = 3;// 
+        //size_t num_threads = 4;//  
          //size_t num_threads = 5; // 3436 milliseconds
          //size_t num_threads = 7; // 3800 milliseconds  //
        // size_t num_threads = 10; //5006 milliseconds
 
-        //int grid_size = 10; //bodies = 2000;
+         //bodies = 2000;
+        //size_t num_threads = 2;//2099 ms 
+        //size_t num_threads = 3;// 
+        //size_t num_threads = 4;// 
         //size_t num_threads = 5; // 5075 milliseconds
         //size_t num_threads = 7; // 5865 
         //size_t num_threads = 10; // 6595 
 
-        //int grid_size = 10; //bodies = 5000;
+        //bodies = 5000;
+        //size_t num_threads = 2;//
+        //size_t num_threads = 3;// 
+        //size_t num_threads = 4;// 
          //size_t num_threads = 5; // 7576 milliseconds
         //size_t num_threads = 7; // 6244 milliseconds 
         //size_t num_threads = 10; // 6757 milliseconds 
 
 
-        //int grid_size = 10; // bodies = 10 000
+        // bodies = 10 000
+        //size_t num_threads = 2;//
+        //size_t num_threads = 3;// 
+        //size_t num_threads = 4;// 
         //size_t num_threads = 5; //18 230 milliseconds 
         //size_t num_threads = 7;  // 12306 milliseconds 
         //size_t num_threads = 10;  // 13881 milliseconds  
