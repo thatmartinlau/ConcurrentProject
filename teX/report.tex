@@ -166,7 +166,7 @@ Once the forces computed, we join all threads and compute the accelerations by s
 
 \subsection{Results}
 
-With these algorithms in hand, we can begin testing. We start with hyper parameter testing. Using the university SSH \texttt{lada} computer, using \texttt{nproc} shows that we have 28 useable cores. We look for the number of threads that give the best performance when simulating 500 asteroids. In all following tests for this section, we test on 15,000 simulation steps.
+With these algorithms in hand, we can begin testing. We start with hyper parameter testing. Using the university SSH \texttt{lada} computer, using \texttt{nproc} shows that we have 28 useable cores. Table 1 looks at the performance of our parallelized algorithms depending on different number of threads. As expected, our algorithms show extremely strong speedup progress as we initially incrase the thread count, maxing out at 13 threads. In all following tests for this section, we will test on 15,000 simulation steps and 13 threads for parallelized algorithms.
 
 \begin{table}[htbp]
 \centering
@@ -174,7 +174,12 @@ With these algorithms in hand, we can begin testing. We start with hyper paramet
 \hline
 \textbf{Number of Threads} & \textbf{Parallel simulation 1} & \textbf{Parallel simulation 2} \\
 \hline
+1     & 62,778  & 23,726       \\
+2     & 51,885  & 33,908       \\
+3     & 34,563  & 16,381       \\
+4     & 26,658  & 12,697       \\
 5     & 22,398  & 10,780       \\
+6     & 20,081  & 11,293       \\
 7     & 18,105  & 10,471    \\
 10    & 15,147  & 10,643   \\
 13    & 13,502  & 10,501   \\
@@ -187,25 +192,24 @@ With these algorithms in hand, we can begin testing. We start with hyper paramet
 \caption{Execution time (in milliseconds) for varying numbers thread counts ($\text{N Bodies} = 500$). Tested on Lada SSH computer - Intel Core i7 14700K - lower times  is better.}
 \label{tab:thread_performance}
 \end{table}
-% Needs to include more intermediate thread count numbers.
 
 We find most favorable results around 13-14 threads, especially for the second algorithm's performance, where the time saved from parallelization does not make up for the overhead for setting up and synchronising multiple threads. So, using 13 threads, we now test the sequential, parallel and better parallel algorithms for increasing numbers of asteroid bodies simulated.
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{|r|r|r|r|}
+\begin{tabular}{|r|r|r|r|r|}
 \hline
-\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} \\
+\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} & \textbf{Best Speedup}\\
 \hline
-0     & 4  & 6,405    & 9,598     \\
-10     & 41  & 5,250  & 7,824   \\
-50    & 468  & 6,567  & 9,752   \\
-100   & 1,689  & 5,739  & 8,151   \\
-200 & 6,573 & 4,747 & 5,566 \\ 
-500 & 38,384 & 13,565 & 10,554 \\
-1,000  &  148,840 & 27,047  &  22,326  \\
-2,000 & 593,866 & 125,044 & 75,797 \\
-3,000 & 1,340,074 & 270,069 & 191,026 \\
+0      & 4         & 6,405   & 9,598    & 0.0006x \\
+10     & 41        & 5,250   & 7,824    & 0.0078x \\
+50     & 468       & 6,567   & 9,752    & 0.0712x \\
+100    & 1,689     & 5,739   & 8,151    & 0.294x \\
+200    & 6,573     & 4,747   & 5,566    & 1.384x \\ 
+500    & 38,384    & 13,565  & 10,554   & 3.636x \\
+1,000  & 148,840   & 27,047  & 22,326   & 6.667x \\
+2,000  & 593,866   & 125,044 & 75,797   & 7.834x \\
+3,000  & 1,340,074 & 270,069 & 191,026  & 7.015x \\
 \hline
 \end{tabular}
 \caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 13$)Tested on Lada SSH computer - Intel Core i7 14700K - lower times is better.}
@@ -216,22 +220,22 @@ I would also like to include the two tables below having tested my code on my ho
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{|r|r|r|r|}
+\begin{tabular}{|r|r|r|r|r|}
 \hline
-\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} \\
+\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} & \textbf{Best Speedup}\\
 \hline
-10     & 63  & 1,732  & 2,651   \\
-50    & 785  & 2,087  & 2,779   \\
-100   & 2,873  & 3,047  & 3,327   \\
-150 & 6,041 & 4,213 & 3,944\\
-200 & 10,624 & 6,194 & 4,403 \\ 
-500 & 65,270 & 24,611 & 12,772 \\
-1,000  &  251,897 & 90,238  &  57,094  \\
-2,000 & 1,017,985& 342,844& 212,045\\
-3,000 & 2,229,012 & 778,039 & 480,847 \\
+10      & 63        & 1,732     & 2,651   & 0.036x   \\
+50      & 785       & 2,087     & 2,779   & 0.376x   \\
+100     & 2,873     & 3,047     & 3,327   & 0.943x   \\
+150     & 6,041     & 4,213     & 3,944   & 1.531x \\
+200     & 10,624    & 6,194     & 4,403   & 2.412x \\ 
+500     & 65,270    & 24,611    & 12,772  & 5.110x  \\
+1,000   &  251,897  & 90,238    & 57,094  & 4.411x   \\
+2,000   & 1,017,985 & 342,844   & 212,045 & 4.800x \\
+3,000   & 2,229,012 & 778,039   & 480,847 & 4.635x \\
 \hline
 \end{tabular}
-\caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 13$)Tested on Martin's home computer - Intel Core i5 8500 - lower times is better.}
+\caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 5$)Tested on Martin's home computer - Intel Core i5 8500 - lower times is better.}
 \label{tab:thread_performance}
 \end{table}
 
@@ -271,7 +275,7 @@ Testing parallel implementation  of the Fast-Fourier using the library in fftw3 
 \begin{table}[h!]
 \centering
 \resizebox{\textwidth}{!}{
-\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+\begin{tabular}{|r|r|r|r|r|r|r|r|r|r|}
 \hline
 \textbf{\# Bodies} & \textbf{Seq (ms)} & \textbf{1 Thread (ms)} & \textbf{2 Threads (ms)} & \textbf{3 Threads (ms)} & \textbf{4 Threads (ms)} & \textbf{5 Threads (ms)} & \textbf{7 Threads (ms)} & \textbf{10 Threads (ms)} & \textbf{Best Speedup (×)} \\
 \hline
@@ -309,17 +313,17 @@ Table~\ref{tab:naive_vs_bh} shows a side‐by‐side comparison between the naiv
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{|r|r|r|}
+    \begin{tabular}{|r|r|r|r|}
     \hline
-    \textbf{Number of Bodies} & \textbf{Naive (sequential)} & \textbf{Barnes–Hut (sequential)} \\
+    \textbf{Number of Bodies} & \textbf{Naive (sequential)} & \textbf{Barnes–Hut (sequential)} & \textbf{Speedup}\\
     \hline
-    0     &     4    &      8    \\ 
-    50    &   468    &    218    \\ 
-    100   &  1\,689  &    604    \\ 
-    200   &  6\,573  &  2\,008   \\ 
-    500   & 38\,384  &  7\,980   \\ 
-    1\,000 & 148\,840 & 21\,951   \\ 
-    2\,000 & 593\,866 & 52\,417   \\ 
+    0     &     4    &      8   & -  \\ 
+    50    &   468    &    218   & -  \\ 
+    100   &  1\,689  &    604   & -  \\ 
+    200   &  6\,573  &  2\,008  & -  \\ 
+    500   & 38\,384  &  7\,980  & -  \\ 
+    1\,000 & 148\,840 & 21\,951 & -  \\ 
+    2\,000 & 593\,866 & 52\,417 & -  \\ 
     \hline
     \end{tabular}
     \caption{Sequential runtimes (ms) for Naive vs.\ Barnes–Hut on our lab machine.}
@@ -381,6 +385,43 @@ Key observations from Table~\ref{tab:bh_seq_vs_par}:
   \item At $N = 10\,000$, the parallel version (73\,084·ms) is about $5.3\times$ faster than sequential (385\,181·ms).
 \end{itemize}
 
+\section{Summary and conclusion}
+
+We conclude this report with the following table comparing the parallelized naive algorithm and the Barnes Hutt algorithm side by side (we would have loved to put a comparison with the particle mesh algorithm, but we could not install the \texttt{fftw3} package onto the school computers).
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|r|r|r|}
+    \hline
+    \textbf{N\# Bodies} & \textbf{Naive (seq)} & \textbf{Naive (MK2)} & \textbf{Barnes–Hut (seq)} & \textbf{Barnes–Hut (parallel)} \\
+    \hline
+    0      & - & - & - & -  \\ 
+    50     & - & - & - & -  \\ 
+    100    & - & - & - & -  \\ 
+    200    & - & - & - & -  \\ 
+    500    & - & - & - & -  \\ 
+    1\,000 & - & - & - & -  \\ 
+    2\,000 & - & - & - & -  \\ 
+    5\,000 & - & - & - & -  \\ 
+    10\,000& - & - & - & -  \\ 
+    50\,000& - & - & - & -  \\ 
+    \hline
+    \end{tabular}
+    \caption{Barnes–Hut runtime vs Naive simulation on lab machine: sequential vs.\ parallel (13 threads), 2000 simulation steps.}
+    \label{tab:bh_seq_vs_par}
+\end{table}
+
+
+
+
+
+
+
+
+%%%% APPENDIX BELOW 
+
+
+%%%%
 
 \appendix
 \newpage
