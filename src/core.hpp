@@ -8,7 +8,9 @@ using std::string;
 #include <Magick++.h>
 
 // CHANGE THE VIDEO SETTINGS HERE!
+#ifndef STEP_COUNT
 #define STEP_COUNT 15000
+#endif 
 #define FRAME_NUM 240
 #define G 6.67430e-11
 

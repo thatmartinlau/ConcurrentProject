@@ -6,6 +6,7 @@ NTHREADS ?= 5  # Default value if not specified
 VISUALIZE ?= false  # Default value
 PRINT_TELEMETRY ?= false  # Default value
 EXPORT_CSV ?= false  # Default value
+STEP_COUNT ?= 1000 # Default value
 
 nbody: 
 	rm -f rockyplanets.mp4 \
@@ -14,6 +15,7 @@ nbody:
 		-DVISUALIZE=$(VISUALIZE) \
 		-DPRINT_TELEMETRY=$(PRINT_TELEMETRY) \
 		-DEXPORT_CSV=$(EXPORT_CSV) \
+		-DSTEP_COUNT=$(STEP_COUNT) \
 		-o nbody_sim \
 		main.cpp \
 		src/core.cpp \
