@@ -1,12 +1,13 @@
 CXX = g++
 CXXFLAGS = -O3 -std=c++17 -fopenmp $(shell pkg-config --cflags Magick++)
-LDFLAGS = -fopenmp $(shell pkg-config --libs Magick++) -lfftw3
+LDFLAGS = -fopenmp $(shell pkg-config --libs Magick++) 
 
 NTHREADS ?= 5  # Default value if not specified
 VISUALIZE ?= false  # Default value
 PRINT_TELEMETRY ?= false  # Default value
 EXPORT_CSV ?= false  # Default value
 STEP_COUNT ?= 1000 # Default value
+BODIES ?= 200 # Default value
 
 nbody: 
 	rm -f rockyplanets.mp4 \
@@ -16,6 +17,7 @@ nbody:
 		-DPRINT_TELEMETRY=$(PRINT_TELEMETRY) \
 		-DEXPORT_CSV=$(EXPORT_CSV) \
 		-DSTEP_COUNT=$(STEP_COUNT) \
+		-DASTEROIDS=$(BODIES) \
 		-o nbody_sim \
 		main.cpp \
 		src/core.cpp \
