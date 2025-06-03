@@ -279,17 +279,16 @@ Testing parallel implementation  of the Fast-Fourier using the library in fftw3 
 5      & 54     & 487    & 1,244  & 1,488  & 1,397  & 2,209  & 2,848  & 4,058  & 0.04 \\
 50     & 109    & 509    & 992    & 1,242  & 1,505  & 2,295  & 2,906  & 3,263  & 0.11 \\
 100    & 157    & 560    & 1,021  & 1,283  & 1,518  & 2,298  & 3,034  & 3,165  & 0.15 \\
-1,000  & 941    & 1,657    & 2,099  & 2,282  & 2,447  & 3,436  & 3,800  & 5,006  & 0.45 \\
-2,000  & 3,013  & 2,918    & 3,190  & 3,650  & 3,456  & 5,075  & 5,865  & 6,595  & 0.94 \\
-5,000  & 7,331  & 5,965    & 6,448  & 6,851  & 6,508  & 7,576  & 6,244  & 6,757  & 1.17 \\
-10,000 & 14,053 & 10,528    & 11,260 & 11,876 & 10,876 & 18,230 & 12,306 & 13,881 & 1.29 \\
+1,000  & 941    & 1,657  & 2,099  & 2,282  & 2,447  & 3,436  & 3,800  & 5,006  & 0.45 \\
+2,000  & 3,013  & 2,918  & 3,190  & 3,650  & 3,456  & 5,075  & 5,865  & 6,595  & 0.94 \\
+5,000  & 7,331  & 5,965  & 6,448  & 6,851  & 6,508  & 7,576  & 6,244  & 6,757  & 1.17 \\
+10,000 & 14,053 & 10,900 & 11,260 & 11,876 & 10,876 & 18,230 & 12,306 & 13,881 & 1.29 \\
 \hline
 \end{tabular}%
 }
 \caption{Execution time and best speedup for varying numbers of bodies and thread counts ($\text{grid size} = 10$). Tested on MacBook Air M2 – 8-core CPU.}
 \label{tab:best_speedup}
 \end{table}
-
 
 A key trend observed is that for small-scale simulations (up to 2,000 bodies), the sequential implementation consistently outperforms the parallel versions. For instance, with only 4 bodies, the sequential time is 52 ms, while with 5 threads it's 1,698 ms (a 32x slowdown). This is due to the overhead associated with thread creation, synchronization, and memory contention, which dominates the limited computational workload. As the number of bodies increases, the performance of the sequential implementation deteriorates more rapidly than the parallel versions, and an equal performance is observed around 2,000 bodies where the parallel execution becomes advantageous.
 
