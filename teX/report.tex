@@ -170,7 +170,7 @@ With these algorithms in hand, we can begin testing. We start with hyper paramet
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{|c|c|c|c|}
+\begin{tabular}{|r|r|r|r|}
 \hline
 \textbf{Number of Threads} & \textbf{Parallel simulation 1} & \textbf{Parallel simulation 2} \\
 \hline
@@ -187,12 +187,13 @@ With these algorithms in hand, we can begin testing. We start with hyper paramet
 \caption{Execution time (in milliseconds) for varying numbers thread counts ($\text{N Bodies} = 500$). Tested on Lada SSH computer - Intel Core i7 14700K - lower times  is better.}
 \label{tab:thread_performance}
 \end{table}
+% Needs to include more intermediate thread count numbers.
 
 We find most favorable results around 13-14 threads, especially for the second algorithm's performance, where the time saved from parallelization does not make up for the overhead for setting up and synchronising multiple threads. So, using 13 threads, we now test the sequential, parallel and better parallel algorithms for increasing numbers of asteroid bodies simulated.
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{|c|c|c|c|}
+\begin{tabular}{|r|r|r|r|}
 \hline
 \textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} \\
 \hline
@@ -215,7 +216,7 @@ I would also like to include the two tables below having tested my code on my ho
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{|c|c|c|c|}
+\begin{tabular}{|r|r|r|r|}
 \hline
 \textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} \\
 \hline
@@ -262,7 +263,7 @@ Testing parallel implementation  of the Fast-Fourier using the library in fftw3 
 \textbf{Time performance of the parallel particle-mesh simulation}
 \begin{table}[htbp]
 \centering
-\begin{tabular}{|c|c|c|c|c|}
+\begin{tabular}{|r|r|r|r|r|}
 \hline
 \textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Threads = 5} & \textbf{Threads = 7} & \textbf{Threads = 10} \\
 \hline
@@ -299,7 +300,7 @@ Table~\ref{tab:naive_vs_bh} shows a side‐by‐side comparison between the naiv
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{|c|c|c|}
+    \begin{tabular}{|r|r|r|}
     \hline
     \textbf{Number of Bodies} & \textbf{Naive (sequential)} & \textbf{Barnes–Hut (sequential)} \\
     \hline
@@ -343,7 +344,7 @@ We only enable this region when \(N > 2000\), since for smaller \(N\) the overhe
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{|c|c|c|}
+    \begin{tabular}{|r|r|r|}
     \hline
     \textbf{Number of Bodies} & \textbf{Barnes–Hut (seq)} & \textbf{Barnes–Hut (parallel)} \\
     \hline
