@@ -91,7 +91,7 @@ All executables accept a `-method=` flag to select the simulation algorithm:
 ./nbody -method=barneshut
 
 # Barnes–Hut parallel
-./nbody -method=barneshut --parallel
+./nbody -method=barneshut -parallel
 
 #Particle-mesh sequential
 ./nbodyparticlemesh_cpu -method=particlemesh
