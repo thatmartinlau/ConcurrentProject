@@ -20,3 +20,6 @@ void BarnesHutStep(std::vector<Body>& bodies,
                    double dt,
                    double theta,
                    bool useParallel);
+
+void naive_with_record(System &universe,
+                       std::vector<std::vector<Vector>> &groundPos);
