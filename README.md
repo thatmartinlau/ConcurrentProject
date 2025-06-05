@@ -84,14 +84,14 @@ All executables accept a `-method=` flag to select the simulation algorithm:
 - `barneshut`— Barnes–Hut \(O(N \log N)\) CPU simulation
 
 ```bash
-# Naive CPU
-./nbody_cpu -method=naive
+# Naive
+./nbody -method=naive
 
 # Barnes–Hut sequential
-./nbody_cpu -method=barneshut
+./nbody -method=barneshut
 
 # Barnes–Hut parallel
-./nbody_cpu -method=barneshut --parallel
+./nbody -method=barneshut --parallel
 
 #Particle-mesh sequential
 ./nbodyparticlemesh_cpu -method=particlemesh
