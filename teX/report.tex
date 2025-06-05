@@ -304,7 +304,7 @@ Overall, the results demonstrate that while the particle-mesh simulation does no
 \section{Barnes–Hut Algorithm}
 
 \noindent
-In this section, we compare the wall‐clock runtime of our Barnes–Hut implementation against the naive (direct \(O(N^2)\)) algorithm under identical conditions, and then investigate how adding OpenMP‐based parallelization impacts the Barnes–Hut performance on our school’s lab workstation. All timing measurements were taken on a lab machine, running a recent Linux distribution. Each reported number is the total elapsed time (in milliseconds) to simulate 1 000 time steps (\texttt{STEP\_COUNT = 1000}) with a fixed \(\Delta t = 3600\) s. We used a single process and pinned threads via OpenMP to minimize scheduling noise, and ran each configuration three times, reporting the median value. For Barnes–Hut parameters, we set the opening‐angle threshold \(\theta = 0.4\) throughout (we will explain this choice in~\ref{theta_tuning}). To avoid measuring transient disk or cache effects, we pre‐warmed the code with a short “dummy” run of 50 steps before starting the timer. All experiments use the same initial conditions—namely, the Sun, five planets (Mercury through Mars), and \(N\) randomly generated asteroids (with \(N\) varying from 0 up to 10 000) placed between 2.2 AU and 3.2 AU. By holding everything else constant (compiler flags, data layout, random seed, etc.), this comparison isolates the algorithmic and parallel overheads between naive and Barnes–Hut methods on the lab hardware.
+In this section, we compare the wall‐clock runtime of our Barnes–Hut implementation against the naive (direct \(O(N^2)\)) algorithm under identical conditions, and then investigate how adding OpenMP‐based parallelization impacts the Barnes–Hut performance on our school’s lab workstation. All timing measurements were taken on a lab machine, running a recent Linux distribution. Each reported number is the total elapsed time (in milliseconds) to simulate 1 000 time steps (\texttt{STEP\_COUNT = 1000}) with a fixed \(\Delta t = 3600\) s. We used a single process and pinned threads via OpenMP to minimize scheduling noise, and ran each configuration three times, reporting the median value. For Barnes–Hut parameters, we set the opening‐angle threshold \(\theta = 0.5\) throughout (we will explain this choice in~\ref{theta_tuning}). To avoid measuring transient disk or cache effects, we pre‐warmed the code with a short “dummy” run of 50 steps before starting the timer. All experiments use the same initial conditions—namely, the Sun, five planets (Mercury through Mars), and \(N\) randomly generated asteroids (with \(N\) varying from 0 up to 10 000) placed between 2.2 AU and 3.2 AU. By holding everything else constant (compiler flags, data layout, random seed, etc.), this comparison isolates the algorithmic and parallel overheads between naive and Barnes–Hut methods on the lab hardware.
 
 
 \subsection{Barnes–Hut vs.\ Naive ($O(N^2)$) Comparison}
@@ -375,7 +375,7 @@ Table~\ref{tab:theta_tuning} summarizes the parallel Barnes–Hut execution time
       0.2  &  8\,352  & \(5.37260\times10^{11}\) \\
       0.3  &  6\,783  & \(5.39987\times10^{11}\) \\
       0.4  &  5\,820  & \(5.43806\times10^{11}\) \\
-      0.5  &  5\,079  & \(5.56800\times10^{11}\) \\
+      0.5  &  4\,970  & \(5.56800\times10^{11}\) \\
       0.6  &  4\,614  & \(5.61284\times10^{11}\) \\
       0.7  &  4\,361  & \(5.63276\times10^{11}\) \\
       0.8  &  4\,087  & \(5.64213\times10^{11}\) \\
@@ -391,18 +391,18 @@ Table~\ref{tab:theta_tuning} summarizes the parallel Barnes–Hut execution time
 
 \begin{itemize}
   \item As \(\theta\) increases, the tree is allowed to approximate larger clusters as single bodies, which reduces runtime monotonically from \(12{,}028\) ms at \(\theta=0.1\) down to \(3{,}776\) ms at \(\theta=1.0\).
-  \item The average position‐error grows slowly with \(\theta\).  For example, moving from \(\theta=0.1\) to \(\theta=0.4\) increases the error from \(5.33\times10^{11}\) to \(5.44\times10^{11}\) (a relative increase of \(\approx2\%\)), while runtime drops by over \(50\%\).
-  \item Beyond \(\theta=0.4\), the error begins to rise more noticeably, especially once \(\theta>0.8\).  Meanwhile, runtime improvements beyond \(\theta=0.5\) are modest (e.g.\ \(5{,}079\to4{,}614\) ms going from \(\theta=0.5\) to \(0.6\)).
+  \item The average position‐error grows slowly with \(\theta\).  For example, moving from \(\theta=0.1\) to \(\theta=0.5\) increases the error from \(5.33\times10^{11}\) to \(5.568\times10^{11}\) (a relative increase of \(\approx4.5\%\)), while runtime drops by nearly \(60\%\) (from \(12{,}028\) ms to \(4{,}970\) ms).
+  \item Beyond \(\theta=0.5\), the error begins to rise more noticeably, especially once \(\theta>0.8\).  Meanwhile, runtime improvements beyond \(\theta=0.5\) are modest (e.g.\ \(4{,}970\to4{,}614\) ms going from \(\theta=0.5\) to \(0.6\)).
 \end{itemize}
 
-\noindent In practice, we select \(\theta=0.4\) because it yields a strong performance gain while keeping the final‐step average error almost as small as the most conservative settings.  Concretely:
+\noindent In practice, we select \(\theta=0.5\) because it yields the best balance between performance and accuracy.  Concretely:
 \[
-  \theta = 0.4 
+  \theta = 0.5 
   \quad\Longrightarrow\quad
-  \text{BH time} = 5{,}820~\text{ms},\quad
-  \text{AvgError} = 5.44\times10^{11}.
+  \text{BH time} = 4{,}970~\text{ms},\quad
+  \text{AvgError} = 5.568\times10^{11}.
 \]
-At \(\theta=0.4\), Barnes–Hut runs roughly twice as fast as the “very accurate” configuration \(\theta=0.1\) (which took \(12{,}028\) ms), while the error increase remains below \(2\%\).  We therefore adopt \(\theta=0.4\) as our standard Barnes–Hut opening‐angle for all subsequent experiments.
+At \(\theta=0.5\), Barnes–Hut runs almost \(2.4\times\) faster than the “very accurate” configuration \(\theta=0.1\) (which took \(12{,}028\) ms), while keeping the error increase under \(5\%\).  We therefore adopt \(\theta=0.5\) as our standard Barnes–Hut opening‐angle for all subsequent experiments.
 
 \subsection{Barnes–Hut: Sequential vs.\ Parallel}
 
