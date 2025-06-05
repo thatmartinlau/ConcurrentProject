@@ -233,3 +233,37 @@ void BarnesHutStep(std::vector<Body>& bodies, double dt, double theta, bool useP
         c.coordinates.data[1] += c.velocity.data[1] * dt;
     }
 }
+
+
+// Additional function for test theta (this one is for computing the error between barneshut and naive_simulation)
+void naive_with_record(System &universe,
+                       std::vector<std::vector<Vector>> &groundPos) {
+    std::cout << "Running naive baseline (recording every step)...\n";
+
+    universe.telemetry.clear();
+
+    int N = static_cast<int>(universe.bodies.size());
+
+    for (int i = 0; i < N; ++i) {
+        groundPos[0][i] = universe.bodies[i].coordinates;
+    }
+
+    for (int step = 0; step < STEP_COUNT; ++step) {
+        for (auto &body : universe.bodies) {
+            body.acceleration = Vector(0, 0);
+        }
+        for (int i = 0; i < N; ++i) {
+            for (int j = i+1; j < N; ++j) {
+                Body &b1 = universe.bodies[i];
+                Body &b2 = universe.bodies[j];
+                Vector f = force(b1, b2);
+                b1.acceleration += f / b1.m;
+                b2.acceleration += f / (-b2.m);
+            }
+        }
+        
+        for (int i = 0; i < N; ++i) {
+            universe.bodies[i].update(universe.dt);
+            groundPos[step+1][i] = universe.bodies[i].coordinates;
+        }
+    }
