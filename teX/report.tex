@@ -391,28 +391,21 @@ We conclude this report with the following table comparing the parallelized naiv
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{|r|r|r|r|r|}
+    \begin{tabular}{|r|r|r|r|r|r|}
     \hline
-    \textbf{N\# Bodies} & \textbf{Naive (seq)} & \textbf{Naive (MK2)} & \textbf{Barnes–Hut (seq)} & \textbf{Barnes–Hut (parallel)} \\
+    \textbf{N} & \textbf{Naive (seq)} & \textbf{Naive (MK2)} & \textbf{B-H (seq)} & \textbf{B-H (par)} & \textbf{Best Speedup} \\
     \hline
-    0      & 4      & 9\,598   & 8       & 35       \\ 
-    50     & 468    & 9\,752   & 218     & 190       \\ 
-    100    & 1\,689 & 8\,151   & 604     & 356       \\ 
-    200    & 6\,573 & 5\,566   & 2\,008  & 710       \\ 
-    500    & 38\,384& 10\,554  & 7\,980  & 2\,161       \\ 
-    1\,000 & 148\,840& 22\,326 & 21\,951 & 4\,970       \\ 
-    2\,000 & 593\,866& 75\,797 & 52\,417 & 10\,987  \\ 
-    5\,000 & -      & -        & 167\,038& 33\,795  \\ 
-    10\,000& -      & -        & 385\,181& 73\,084  \\ 
-    50\,000& -      & -        & 2\,485\,764 & 473\,061  \\ 
+    2\,000 & 48,150 & 5,113 & 52,417 & 10,987  &  10.25x\\ 
+    5\,000 & 258,093 & 35,481 & 167,038 & 33,795 &  7.63x\\ 
+    10\,000& 1,154,546 & 115,194 & 385,181 & 73,084&  15.80x \\ 
+    50\,000& 31,401,969 & 4,036,995 & 2,485,764 & 473,061& 66.38x  \\ 
     \hline
     \end{tabular}
-    \caption{Barnes–Hut runtime vs.\ Naive simulation on lab machine: sequential vs.\ parallel (13 threads), 1000 simulation steps.}
+    \caption{Barnes–Hut runtime vs Naive simulation on lab machine: sequential vs.\, parallel (13 threads), 1000 simulation steps.}
     \label{tab:bh_seq_vs_par}
 \end{table}
 
-
-
+We find that for very large numbers of bodies, Barnes Hutt comes out as the fastest algorithm, achieving results as much as 66 times faster than a naive sequential algorithm. This clearly shows the asymptotic speedup offered by parallelization and specially designed algorithms for the N-Body problem.
 
 
 
