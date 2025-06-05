@@ -352,7 +352,7 @@ for (int i = 0; i < N; ++i) {
 }
 \end{verbatim}
 
-We only enable this region when \(N > 2000\), since for smaller \(N\) the overhead of spawning threads outweighs the benefit. Threads are pinned via OpenMP’s default affinity (on our lab machine), and we reran each measurement three times (taking the median) to reduce variability.  
+We now enable this region for all number of bodies, but notice that for smaller \(N\) the overhead of spawning threads might outweigh the benefit. Threads are pinned via OpenMP’s default affinity (on our lab machine), and we reran each measurement three times (taking the median) to reduce variability.  
 
 
 \begin{table}[H]
@@ -361,12 +361,12 @@ We only enable this region when \(N > 2000\), since for smaller \(N\) the overhe
     \hline
     \textbf{Number of Bodies} & \textbf{Barnes–Hut (seq)} & \textbf{Barnes–Hut (parallel)} \\
     \hline
-    0      &       8   &       -    \\ 
-    50     &     218   &     -    \\ 
-    100    &     604   &     -    \\ 
-    200    &   2\,008  &   -   \\ 
-    500    &   7\,980  &   -   \\ 
-    1\,000 &  21\,951  &  -   \\ 
+    0      &       8   &       35    \\ 
+    50     &     218   &     190    \\ 
+    100    &     604   &     356    \\ 
+    200    &   2\,008  &   710   \\ 
+    500    &   7\,980  &   2\,161   \\ 
+    1\,000 &  21\,951  &  4\,970   \\ 
     2\,000 &  52\,417  &  10\,987   \\ 
     5\,000 & 167\,038  &  33\,795   \\ 
     10\,000& 385\,181  &  73\,084   \\ 
@@ -395,12 +395,12 @@ We conclude this report with the following table comparing the parallelized naiv
     \hline
     \textbf{N\# Bodies} & \textbf{Naive (seq)} & \textbf{Naive (MK2)} & \textbf{Barnes–Hut (seq)} & \textbf{Barnes–Hut (parallel)} \\
     \hline
-    0      & 4      & 9\,598   & 8       & -       \\ 
-    50     & 468    & 9\,752   & 218     & -       \\ 
-    100    & 1\,689 & 8\,151   & 604     & -       \\ 
-    200    & 6\,573 & 5\,566   & 2\,008  & -       \\ 
-    500    & 38\,384& 10\,554  & 7\,980  & -       \\ 
-    1\,000 & 148\,840& 22\,326 & 21\,951 & -       \\ 
+    0      & 4      & 9\,598   & 8       & 35       \\ 
+    50     & 468    & 9\,752   & 218     & 190       \\ 
+    100    & 1\,689 & 8\,151   & 604     & 356       \\ 
+    200    & 6\,573 & 5\,566   & 2\,008  & 710       \\ 
+    500    & 38\,384& 10\,554  & 7\,980  & 2\,161       \\ 
+    1\,000 & 148\,840& 22\,326 & 21\,951 & 4\,970       \\ 
     2\,000 & 593\,866& 75\,797 & 52\,417 & 10\,987  \\ 
     5\,000 & -      & -        & 167\,038& 33\,795  \\ 
     10\,000& -      & -        & 385\,181& 73\,084  \\ 
