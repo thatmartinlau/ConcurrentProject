@@ -210,7 +210,7 @@ void BarnesHutStep(std::vector<Body>& bodies, double dt, double theta, bool useP
     int n = static_cast<int>(bodies.size());
 
     // 6) Compute accelerations (parallel if big enough)
-    if (useParallel && n > 2000) {
+    if (useParallel) { // remove the restriction of bodies > 2000
         #pragma omp parallel for schedule(static)
         for (int i = 0; i < n; ++i) {
             Vector f = computeForceIterative(bodies[i], root, theta);
