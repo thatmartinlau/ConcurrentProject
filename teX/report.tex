@@ -166,7 +166,7 @@ Once the forces computed, we join all threads and compute the accelerations by s
 
 \subsection{Results}
 
-With these algorithms in hand, we can begin testing. We start with hyper parameter testing. Using the university SSH \texttt{lada} computer, using \texttt{nproc} shows that we have 28 useable cores. We look for the number of threads that give the best performance when simulating 500 asteroids. In all following tests for this section, we test on 15,000 simulation steps.
+With these algorithms in hand, we can begin testing. We start with hyper parameter testing. Using the university SSH \texttt{lada} computer, using \texttt{nproc} shows that we have 28 useable cores. Table 1 looks at the performance of our parallelized algorithms depending on different number of threads. As expected, our algorithms show extremely strong speedup progress as we initially incrase the thread count, maxing out at 13 threads. In all following tests for this section, we will test on 15,000 simulation steps and 13 threads for parallelized algorithms.
 
 \begin{table}[htbp]
 \centering
@@ -174,7 +174,12 @@ With these algorithms in hand, we can begin testing. We start with hyper paramet
 \hline
 \textbf{Number of Threads} & \textbf{Parallel simulation 1} & \textbf{Parallel simulation 2} \\
 \hline
+1     & 62,778  & 23,726       \\
+2     & 51,885  & 33,908       \\
+3     & 34,563  & 16,381       \\
+4     & 26,658  & 12,697       \\
 5     & 22,398  & 10,780       \\
+6     & 20,081  & 11,293       \\
 7     & 18,105  & 10,471    \\
 10    & 15,147  & 10,643   \\
 13    & 13,502  & 10,501   \\
@@ -187,25 +192,24 @@ With these algorithms in hand, we can begin testing. We start with hyper paramet
 \caption{Execution time (in milliseconds) for varying numbers thread counts ($\text{N Bodies} = 500$). Tested on Lada SSH computer - Intel Core i7 14700K - lower times  is better.}
 \label{tab:thread_performance}
 \end{table}
-% Needs to include more intermediate thread count numbers.
 
 We find most favorable results around 13-14 threads, especially for the second algorithm's performance, where the time saved from parallelization does not make up for the overhead for setting up and synchronising multiple threads. So, using 13 threads, we now test the sequential, parallel and better parallel algorithms for increasing numbers of asteroid bodies simulated.
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{|r|r|r|r|}
+\begin{tabular}{|r|r|r|r|r|}
 \hline
-\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} \\
+\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} & \textbf{Best Speedup}\\
 \hline
-0     & 4  & 6,405    & 9,598     \\
-10     & 41  & 5,250  & 7,824   \\
-50    & 468  & 6,567  & 9,752   \\
-100   & 1,689  & 5,739  & 8,151   \\
-200 & 6,573 & 4,747 & 5,566 \\ 
-500 & 38,384 & 13,565 & 10,554 \\
-1,000  &  148,840 & 27,047  &  22,326  \\
-2,000 & 593,866 & 125,044 & 75,797 \\
-3,000 & 1,340,074 & 270,069 & 191,026 \\
+0      & 4         & 6,405   & 9,598    & 0.0006x \\
+10     & 41        & 5,250   & 7,824    & 0.0078x \\
+50     & 468       & 6,567   & 9,752    & 0.0712x \\
+100    & 1,689     & 5,739   & 8,151    & 0.294x \\
+200    & 6,573     & 4,747   & 5,566    & 1.384x \\ 
+500    & 38,384    & 13,565  & 10,554   & 3.636x \\
+1,000  & 148,840   & 27,047  & 22,326   & 6.667x \\
+2,000  & 593,866   & 125,044 & 75,797   & 7.834x \\
+3,000  & 1,340,074 & 270,069 & 191,026  & 7.015x \\
 \hline
 \end{tabular}
 \caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 13$)Tested on Lada SSH computer - Intel Core i7 14700K - lower times is better.}
@@ -216,22 +220,22 @@ I would also like to include the two tables below having tested my code on my ho
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{|r|r|r|r|}
+\begin{tabular}{|r|r|r|r|r|}
 \hline
-\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} \\
+\textbf{Number of Bodies} & \textbf{Sequential} & \textbf{Parallel} & \textbf{Better Parallel} & \textbf{Best Speedup}\\
 \hline
-10     & 63  & 1,732  & 2,651   \\
-50    & 785  & 2,087  & 2,779   \\
-100   & 2,873  & 3,047  & 3,327   \\
-150 & 6,041 & 4,213 & 3,944\\
-200 & 10,624 & 6,194 & 4,403 \\ 
-500 & 65,270 & 24,611 & 12,772 \\
-1,000  &  251,897 & 90,238  &  57,094  \\
-2,000 & 1,017,985& 342,844& 212,045\\
-3,000 & 2,229,012 & 778,039 & 480,847 \\
+10      & 63        & 1,732     & 2,651   & 0.036x   \\
+50      & 785       & 2,087     & 2,779   & 0.376x   \\
+100     & 2,873     & 3,047     & 3,327   & 0.943x   \\
+150     & 6,041     & 4,213     & 3,944   & 1.531x \\
+200     & 10,624    & 6,194     & 4,403   & 2.412x \\ 
+500     & 65,270    & 24,611    & 12,772  & 5.110x  \\
+1,000   &  251,897  & 90,238    & 57,094  & 4.411x   \\
+2,000   & 1,017,985 & 342,844   & 212,045 & 4.800x \\
+3,000   & 2,229,012 & 778,039   & 480,847 & 4.635x \\
 \hline
 \end{tabular}
-\caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 13$)Tested on Martin's home computer - Intel Core i5 8500 - lower times is better.}
+\caption{Execution time (in milliseconds) for varying numbers of bodies ($\text{N Threads} = 5$)Tested on Martin's home computer - Intel Core i5 8500 - lower times is better.}
 \label{tab:thread_performance}
 \end{table}
 
@@ -271,7 +275,7 @@ Testing parallel implementation  of the Fast-Fourier using the library in fftw3 
 \begin{table}[h!]
 \centering
 \resizebox{\textwidth}{!}{
-\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+\begin{tabular}{|r|r|r|r|r|r|r|r|r|r|}
 \hline
 \textbf{\# Bodies} & \textbf{Seq (ms)} & \textbf{1 Thread (ms)} & \textbf{2 Threads (ms)} & \textbf{3 Threads (ms)} & \textbf{4 Threads (ms)} & \textbf{5 Threads (ms)} & \textbf{7 Threads (ms)} & \textbf{10 Threads (ms)} & \textbf{Best Speedup (×)} \\
 \hline
@@ -300,7 +304,7 @@ Overall, the results demonstrate that while the particle-mesh simulation does no
 \section{Barnes–Hut Algorithm}
 
 \noindent
-In this section, we compare the wall‐clock runtime of our Barnes–Hut implementation against the naive (direct \(O(N^2)\)) algorithm under identical conditions, and then investigate how adding OpenMP‐based parallelization impacts the Barnes–Hut performance on our school’s lab workstation. All timing measurements were taken on a lab machine, running a recent Linux distribution. Each reported number is the total elapsed time (in milliseconds) to simulate 1 000 time steps (\texttt{STEP\_COUNT = 1000}) with a fixed \(\Delta t = 3600\) s. We used a single process and pinned threads via OpenMP to minimize scheduling noise, and ran each configuration three times, reporting the median value. For Barnes–Hut parameters, we set the opening‐angle threshold \(\theta = 0.5\) throughout. To avoid measuring transient disk or cache effects, we pre‐warmed the code with a short “dummy” run of 50 steps before starting the timer. All experiments use the same initial conditions—namely, the Sun, five planets (Mercury through Mars), and \(N\) randomly generated asteroids (with \(N\) varying from 0 up to 10 000) placed between 2.2 AU and 3.2 AU. By holding everything else constant (compiler flags, data layout, random seed, etc.), this comparison isolates the algorithmic and parallel overheads between naive and Barnes–Hut methods on the lab hardware.
+In this section, we compare the wall‐clock runtime of our Barnes–Hut implementation against the naive (direct \(O(N^2)\)) algorithm under identical conditions, and then investigate how adding OpenMP‐based parallelization impacts the Barnes–Hut performance on our school’s lab workstation. All timing measurements were taken on a lab machine, running a recent Linux distribution. Each reported number is the total elapsed time (in milliseconds) to simulate 1 000 time steps (\texttt{STEP\_COUNT = 1000}) with a fixed \(\Delta t = 3600\) s. We used a single process and pinned threads via OpenMP to minimize scheduling noise, and ran each configuration three times, reporting the median value. For Barnes–Hut parameters, we set the opening‐angle threshold \(\theta = 0.5\) throughout (we will explain this choice in~\ref{theta_tuning}). To avoid measuring transient disk or cache effects, we pre‐warmed the code with a short “dummy” run of 50 steps before starting the timer. All experiments use the same initial conditions—namely, the Sun, five planets (Mercury through Mars), and \(N\) randomly generated asteroids (with \(N\) varying from 0 up to 10 000) placed between 2.2 AU and 3.2 AU. By holding everything else constant (compiler flags, data layout, random seed, etc.), this comparison isolates the algorithmic and parallel overheads between naive and Barnes–Hut methods on the lab hardware.
 
 
 \subsection{Barnes–Hut vs.\ Naive ($O(N^2)$) Comparison}
@@ -309,20 +313,20 @@ Table~\ref{tab:naive_vs_bh} shows a side‐by‐side comparison between the naiv
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{|r|r|r|}
+    \begin{tabular}{|r|r|r|r|}
     \hline
-    \textbf{Number of Bodies} & \textbf{Naive (sequential)} & \textbf{Barnes–Hut (sequential)} \\
+    \textbf{Number of Bodies} & \textbf{Naive (sequential)} & \textbf{Barnes–Hut (sequential)} & \textbf{Speedup}\\
     \hline
-    0     &     4    &      8    \\ 
-    50    &   468    &    218    \\ 
-    100   &  1\,689  &    604    \\ 
-    200   &  6\,573  &  2\,008   \\ 
-    500   & 38\,384  &  7\,980   \\ 
-    1\,000 & 148\,840 & 21\,951   \\ 
-    2\,000 & 593\,866 & 52\,417   \\ 
+    0     & 4      & 8       & 0.50× \\ 
+    50    & 468    & 218     & 2.15× \\ 
+    100   & 1\,689 & 604     & 2.80× \\ 
+    200   & 6\,573 & 2\,008  & 3.27× \\ 
+    500   & 38\,384& 7\,980  & 4.81× \\ 
+    1\,000 & 148\,840 & 21\,951 & 6.78× \\ 
+    2\,000 & 593\,866 & 52\,417 & 11.33× \\ 
     \hline
     \end{tabular}
-    \caption{Sequential runtimes (ms) for Naive vs.\ Barnes–Hut on our lab machine.}
+    \caption{Sequential runtimes (ms) for Naive vs.\ Barnes–Hut on our lab machine}
     \label{tab:naive_vs_bh}
 \end{table}
 
@@ -332,6 +336,73 @@ From Table~\ref{tab:naive_vs_bh}, we observe:
   \item For $N \le 50$, the naive algorithm can be comparable or slightly faster, since Barnes–Hut’s tree‐construction overhead dominates.
   \item Starting around $N = 100$, Barnes–Hut clearly outperforms naive, and by $N=2\,000$ it is an order of magnitude faster.
 \end{itemize}
+
+\subsection{Tuning the Opening‐Angle \(\theta\)}
+\label{theta_tuning}
+
+To assess the trade‐off between Barnes–Hut accuracy and performance, we ran a series of benchmark experiments with varying opening‐angle thresholds \(\theta\).  In each trial, we used the same initial conditions described above (Sun, five planets, and \(N=1000\) randomly placed asteroids), simulated for \(15{,}000\) time steps, and compared the Barnes–Hut result against a “ground truth” trajectory produced by the naive \(O(N^2)\) implementation (The naive\_simulation).  Concretely:
+
+\begin{enumerate}
+  \item We first executed:
+  \[
+    \texttt{./nbody -method=naive\_baseline -BODIES=1000}
+  \]
+  to generate \texttt{ground\_truth\_positions.bin}, which records every particle’s \((x,y)\) coordinates at each of the \(15{,}001\) frames (initial state plus \(15{,}000\) steps).  The runtime of that naive run served as our reference \(T_{\text{naive}}(1000)\) and is not shown here.
+
+  \item Next, for each \(\theta\in\{0.1,\,0.2,\,\dots,\,1.0\}\) we ran:
+  \[
+    \texttt{OMP\_NUM\_THREADS=13 ./nbody -method=barneshut -parallel -BODIES=1000 -DTHETA=<value>}
+  \]
+  where \(\texttt{DTHETA=<value>}\) compiles Barnes–Hut with that specific opening‐angle.  Each run was pre‐warmed with 50 steps (not timed), then timed over the full \(15{,}000\) steps; the final positions were compared—frame by frame—to the naive baseline.  In particular, we compute the \emph{average Euclidean error} at the last step:
+  \[
+    \text{AvgError}(\theta) \;=\; 
+      \sqrt{\frac{1}{1000}\sum_{i=1}^{1000} \bigl\lVert 
+        \mathbf{x}_i^{\text{BH}}(15{,}000)\;-\;\mathbf{x}_i^{\text{naive}}(15{,}000)\bigr\rVert^2}\,.
+  \]
+\end{enumerate}
+
+Table~\ref{tab:theta_tuning} summarizes the parallel Barnes–Hut execution time and final‐step average error for each tested \(\theta\).  All runs used 13 OpenMP threads, \(N=1000\) bodies, \(\Delta t = 3600\) s, and \(15{,}000\) integration steps.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|r|r|}
+      \hline
+      \(\theta\) 
+        & \multicolumn{1}{c|}{\textbf{BH (parallel) Time (ms)}} 
+        & \multicolumn{1}{c|}{\textbf{Avg Error at Step 15000}} \\
+      \hline
+      0.1  & 12\,028  & \(5.32818\times10^{11}\) \\
+      0.2  &  8\,352  & \(5.37260\times10^{11}\) \\
+      0.3  &  6\,783  & \(5.39987\times10^{11}\) \\
+      0.4  &  5\,820  & \(5.43806\times10^{11}\) \\
+      0.5  &  4\,970  & \(5.56800\times10^{11}\) \\
+      0.6  &  4\,614  & \(5.61284\times10^{11}\) \\
+      0.7  &  4\,361  & \(5.63276\times10^{11}\) \\
+      0.8  &  4\,087  & \(5.64213\times10^{11}\) \\
+      0.9  &  3\,905  & \(5.74404\times10^{11}\) \\
+      1.0  &  3\,776  & \(5.77586\times10^{11}\) \\
+      \hline
+    \end{tabular}
+    \caption{Barnes–Hut (parallel, 13 threads) runtime and final‐step average error as a function of \(\theta\), for \(N=1000\) over 15\,000 steps.}
+    \label{tab:theta_tuning}
+\end{table}
+
+\noindent From Table~\ref{tab:theta_tuning} we observe:
+
+\begin{itemize}
+  \item As \(\theta\) increases, the tree is allowed to approximate larger clusters as single bodies, which reduces runtime monotonically from \(12{,}028\) ms at \(\theta=0.1\) down to \(3{,}776\) ms at \(\theta=1.0\).
+  \item The average position‐error grows slowly with \(\theta\).  For example, moving from \(\theta=0.1\) to \(\theta=0.5\) increases the error from \(5.33\times10^{11}\) to \(5.568\times10^{11}\) (a relative increase of \(\approx4.5\%\)), while runtime drops by nearly \(60\%\) (from \(12{,}028\) ms to \(4{,}970\) ms).
+  \item Beyond \(\theta=0.5\), the error begins to rise more noticeably, especially once \(\theta>0.8\).  Meanwhile, runtime improvements beyond \(\theta=0.5\) are modest (e.g.\ \(4{,}970\to4{,}614\) ms going from \(\theta=0.5\) to \(0.6\)).
+\end{itemize}
+
+\noindent In practice, we select \(\theta=0.5\) because it yields the best balance between performance and accuracy.  Concretely:
+\[
+  \theta = 0.5 
+  \quad\Longrightarrow\quad
+  \text{BH time} = 4{,}970~\text{ms},\quad
+  \text{AvgError} = 5.568\times10^{11}.
+\]
+At \(\theta=0.5\), Barnes–Hut runs almost \(2.4\times\) faster than the “very accurate” configuration \(\theta=0.1\) (which took \(12{,}028\) ms), while keeping the error increase under \(5\%\).  We therefore adopt \(\theta=0.5\) as our standard Barnes–Hut opening‐angle for all subsequent experiments.
 
 \subsection{Barnes–Hut: Sequential vs.\ Parallel}
 
@@ -348,7 +419,7 @@ for (int i = 0; i < N; ++i) {
 }
 \end{verbatim}
 
-We only enable this region when \(N > 2000\), since for smaller \(N\) the overhead of spawning threads outweighs the benefit. Threads are pinned via OpenMP’s default affinity (on our lab machine), and we reran each measurement three times (taking the median) to reduce variability.  
+We now enable this region for all number of bodies, but notice that for smaller \(N\) the overhead of spawning threads might outweigh the benefit. Threads are pinned via OpenMP’s default affinity (on our lab machine), and we reran each measurement three times (taking the median) to reduce variability.  
 
 
 \begin{table}[H]
@@ -357,12 +428,12 @@ We only enable this region when \(N > 2000\), since for smaller \(N\) the overhe
     \hline
     \textbf{Number of Bodies} & \textbf{Barnes–Hut (seq)} & \textbf{Barnes–Hut (parallel)} \\
     \hline
-    0      &       8   &       -    \\ 
-    50     &     218   &     -    \\ 
-    100    &     604   &     -    \\ 
-    200    &   2\,008  &   -   \\ 
-    500    &   7\,980  &   -   \\ 
-    1\,000 &  21\,951  &  -   \\ 
+    0      &       8   &       35    \\ 
+    50     &     218   &     190    \\ 
+    100    &     604   &     356    \\ 
+    200    &   2\,008  &   710   \\ 
+    500    &   7\,980  &   2\,161   \\ 
+    1\,000 &  21\,951  &  4\,970   \\ 
     2\,000 &  52\,417  &  10\,987   \\ 
     5\,000 & 167\,038  &  33\,795   \\ 
     10\,000& 385\,181  &  73\,084   \\ 
@@ -381,6 +452,36 @@ Key observations from Table~\ref{tab:bh_seq_vs_par}:
   \item At $N = 10\,000$, the parallel version (73\,084·ms) is about $5.3\times$ faster than sequential (385\,181·ms).
 \end{itemize}
 
+\section{Summary and conclusion}
+
+We conclude this report with the following table comparing the parallelized naive algorithm and the Barnes Hutt algorithm side by side (we would have loved to put a comparison with the particle mesh algorithm, but we could not install the \texttt{fftw3} package onto the school computers).
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|r|r|r|r|}
+    \hline
+    \textbf{N} & \textbf{Naive (seq)} & \textbf{Naive (MK2)} & \textbf{B-H (seq)} & \textbf{B-H (par)} & \textbf{Best Speedup} \\
+    \hline
+    2\,000 & 48,150 & 5,113 & 52,417 & 10,987  &  10.25x\\ 
+    5\,000 & 258,093 & 35,481 & 167,038 & 33,795 &  7.63x\\ 
+    10\,000& 1,154,546 & 115,194 & 385,181 & 73,084&  15.80x \\ 
+    50\,000& 31,401,969 & 4,036,995 & 2,485,764 & 473,061& 66.38x  \\ 
+    \hline
+    \end{tabular}
+    \caption{Barnes–Hut runtime vs Naive simulation on lab machine: sequential vs.\, parallel (13 threads), 1000 simulation steps.}
+    \label{tab:bh_seq_vs_par}
+\end{table}
+
+The results demonstrate that algorithm choice becomes increasingly critical as N grows. While the naive approach performs adequately for small N ($\leq$ 2000), Barnes-Hut shows superior scaling for larger systems. At N=50,000, Barnes-Hut is not only faster but shows better parallel efficiency, suggesting it's the preferred choice for large-scale simulations.
+
+The increasing speedup ratio (from 10.25x at N=2,000 to 66.38x at N=50,000) highlights how algorithmic optimization combined with parallelization can dramatically improve performance for larger systems. This makes previously intractable problems computationally feasible, enabling simulation of larger celestial systems or molecular dynamics problems.
+
+
+
+%%%% APPENDIX BELOW 
+
+
+%%%%
 
 \appendix
 \newpage

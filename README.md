@@ -82,17 +82,16 @@ All executables accept a `-method=` flag to select the simulation algorithm:
 
 - `naive`    — simple \(O(N^2)\) CPU simulation
 - `barneshut`— Barnes–Hut \(O(N \log N)\) CPU simulation
-- `barneshut_gpu`      — Barnes–Hut brute‑force \(O(N^2)\) GPU simulation (if built with `USE_CUDA`)
 
 ```bash
-# Naive CPU
-./nbody_cpu -method=naive
+# Naive
+./nbody -method=naive
 
-# Barnes–Hut CPU
-./nbody_cpu -method=barneshut
+# Barnes–Hut sequential
+./nbody -method=barneshut
 
-# Barnes–Hut GPU brute‑force
-./nbody_gpu -method=barneshut_gpu
+# Barnes–Hut parallel
+./nbody -method=barneshut -parallel
 
 #Particle-mesh sequential
 ./nbodyparticlemesh_cpu -method=particlemesh

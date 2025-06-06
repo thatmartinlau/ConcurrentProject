@@ -190,6 +190,34 @@ int main(int argc, char** argv) {
         std::cout << "Simulation2 time parallel: " << time_taken_par2.count() << " milliseconds.\n";
 
     }
+    // This method is to compute the ground truth position, used only to compute the error between Barneshut and naive
+    else if (method == "naive_baseline") {
+        int N = static_cast<int>(universe.bodies.size());
+        groundPos.resize(STEP_COUNT + 1);
+        for (int step = 0; step <= STEP_COUNT; ++step) {
+            groundPos[step].resize(N);
+        }
+
+        auto naive_start = std::chrono::high_resolution_clock::now();
+        naive_with_record(universe, groundPos);
+        auto naive_end = std::chrono::high_resolution_clock::now();
+        auto naive_time = std::chrono::duration_cast<std::chrono::milliseconds>(naive_end - naive_start);
+
+        std::cout << "Naive baseline total time: " << naive_time.count() << " ms\n";
+
+        std::ofstream out("ground_truth_positions.bin", std::ios::binary);
+        for (int step = 0; step <= STEP_COUNT; ++step) {
+            for (int i = 0; i < N; ++i) {
+                double x = groundPos[step][i].data[0];
+                double y = groundPos[step][i].data[1];
+                out.write(reinterpret_cast<const char*>(&x), sizeof(double));
+                out.write(reinterpret_cast<const char*>(&y), sizeof(double));
+            }
+        }
+        out.close();
+        std::cout << "Ground truth positions written to ground_truth_positions.bin\n";
+        return 0;
+    }
     else if (method == "barneshut") {
         auto start_bh = std::chrono::high_resolution_clock::now();
 
@@ -216,6 +244,35 @@ int main(int argc, char** argv) {
             std::chrono::duration_cast<std::chrono::milliseconds>(end_bh - start_bh);
         std::cout << "Barnes-Hut simulation time: "
                   << time_bh.count() << " milliseconds.\n";
+
+        // Uncomment the following part for error calculation between Barneshut and the naive simulation
+        // int N = static_cast<int>(universe.bodies.size());
+        // std::vector<std::vector<Vector>> groundPos_ref(STEP_COUNT+1, std::vector<Vector>(N));
+        // {
+        //     std::ifstream in("ground_truth_positions.bin", std::ios::binary);
+        //     for (int step = 0; step <= STEP_COUNT; ++step) {
+        //         for (int i = 0; i < N; ++i) {
+        //             double x,y;
+        //             in.read(reinterpret_cast<char*>(&x), sizeof(double));
+        //             in.read(reinterpret_cast<char*>(&y), sizeof(double));
+        //             groundPos_ref[step][i].data[0] = x;
+        //             groundPos_ref[step][i].data[1] = y;
+        //         }
+        //     }
+        //     in.close();
+        // }
+
+        // double err_sq_sum = 0.0;
+        // int step = STEP_COUNT;
+        // for (int i = 0; i < N; ++i) {
+        //     Vector simPos = universe.telemetry[step][i];
+        //     Vector refPos = groundPos_ref[step][i];
+        //     double dx = simPos.data[0] - refPos.data[0];
+        //     double dy = simPos.data[1] - refPos.data[1];
+        //     err_sq_sum += dx*dx + dy*dy;
+        // }
+        // double avg_error = std::sqrt(err_sq_sum / double(N));
+        // std::cout << "Avg error at step " << step << " is " << avg_error << "\n";
     }
     else if (method == "particlemesh"){
         int grid_size = 100; // added this 
