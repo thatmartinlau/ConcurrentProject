@@ -472,9 +472,9 @@ We conclude this report with the following table comparing the parallelized naiv
     \label{tab:bh_seq_vs_par}
 \end{table}
 
-We find that for very large numbers of bodies, Barnes Hutt comes out as the fastest algorithm, achieving results as much as 66 times faster than a naive sequential algorithm. This clearly shows the asymptotic speedup offered by parallelization and specially designed algorithms for the N-Body problem.
+The results demonstrate that algorithm choice becomes increasingly critical as N grows. While the naive approach performs adequately for small N ($\leq$ 2000), Barnes-Hut shows superior scaling for larger systems. At N=50,000, Barnes-Hut is not only faster but shows better parallel efficiency, suggesting it's the preferred choice for large-scale simulations.
 
-
+The increasing speedup ratio (from 10.25x at N=2,000 to 66.38x at N=50,000) highlights how algorithmic optimization combined with parallelization can dramatically improve performance for larger systems. This makes previously intractable problems computationally feasible, enabling simulation of larger celestial systems or molecular dynamics problems.
 
 
 
