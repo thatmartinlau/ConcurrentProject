@@ -52,8 +52,6 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size, double
 
         // Deposit mass to grid
         for (const auto &body : universe.bodies) {
-
-            
             // NGP (Nearest Grid Point Method)
             int grid_x = static_cast<int>((body.coordinates.data[0] - min_pos.data[0]) / cell_size);
             int grid_y = static_cast<int>((body.coordinates.data[1] - min_pos.data[1]) / cell_size);
@@ -61,10 +59,7 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size, double
                 grid[grid_x][grid_y] += body.m;
             } else if (DEBUG) {
                 std::cerr << "Body " << body.title << " is out of bounds at step " << step << "\n";
-            }
-            
-
-            
+            }            
         }
         // Copy grid mass into FFT input
         for (int i = 0; i < grid_size; ++i) {
@@ -101,7 +96,6 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size, double
                 potential[i][j] =  in[i * grid_size + j][0] / (grid_size * grid_size);
             }
         }
-        //std::cout<< "cell_size" << cell_size <<"\n";
 
         // Compute acceleration from potential gradients
         for (auto &body : universe.bodies) {
@@ -113,7 +107,6 @@ void particle_mesh_simulation(System &universe, double dt, int grid_size, double
                 double fx = -(potential[grid_x + 1][grid_y] - potential[grid_x - 1][grid_y]) / (2.0 * cell_size);
                 double fy = -(potential[grid_x][grid_y + 1] - potential[grid_x][grid_y - 1]) / (2.0 * cell_size);
                 body.acceleration = Vector(fx, fy);
-                //std::cout <<"fx, fy: " << fx <<" "<< fy <<" for Body " << body.title << "\n";
             } else {
                 body.acceleration = Vector(0.0, 0.0);
             }

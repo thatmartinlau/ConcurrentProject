@@ -20,9 +20,8 @@
 
 
 int main(int argc, char** argv) {
-    // Default choice of method
-    //std::string method = "particlemesh_thread";
-    std::string method =  "particlemesh";
+    std::string method = "particlemesh_thread";
+    //std::string method =  "particlemesh";
     // Parse args for different methods
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -81,7 +80,8 @@ int main(int argc, char** argv) {
     std::uniform_real_distribution<double> close_dist_dist(0.5, 5.0);  // avoid too small radii
     std::uniform_real_distribution<double> close_angle_dist(0.0, 2 * M_PI);
 
-    for (int i = 0; i <9995; ++i) {
+    int number_of_asteroids=9995;
+    for (int i = 0; i <number_of_asteroids; ++i) {
     double mass = close_mass_dist(gen);
     double distance = close_dist_dist(gen);
     double angle = close_angle_dist(gen);
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
     universe.add(close_asteroid);
     }
 
-    double dt = 0.2; // fuck it, one hour
+    double dt = 0.2; // time step
     universe.dt = dt;
 
     // Dispatch to the appropriate simulation method
@@ -123,8 +123,8 @@ int main(int argc, char** argv) {
         particle_mesh_simulation(universe, dt, grid_size, R);
     }else if (method == "particlemesh_thread"){
         int grid_size = 10;
-         //bodies = 4
-        size_t num_threads = 1;// 1180 ms
+        //bodies = 4
+        size_t num_threads = 5;// 1180 ms
         //size_t num_threads = 3;// 1477 ms
         //size_t num_threads = 4;// 1865 ms //
         //size_t num_threads = 5; //2200 milliseconds 

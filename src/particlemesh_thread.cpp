@@ -15,8 +15,8 @@
 
 
 
-//use function from Martin
-void optimized_update_aux2(System& universe,          // Modify
+//use function from simulation.cpp 
+void optimized_update_aux2(System& universe,          
                         const int start, const int end, std::vector<Vector>& positions,
                         const double dt) {
     for (int i = start; i < end; i++) {
@@ -124,9 +124,7 @@ void particle_mesh_simulation_parallel(System &universe, double dt, int grid_siz
         }
         threads.clear();
 
-
-        //std::cout<<"managed first parallelization!"<< "\n";
-        // === 2. FFT and Potential Computation (single-threaded, FFTW is not thread-safe) ===
+        // FFT and Potential Computation 
         for (int i = 0; i < grid_size; ++i){
             for (int j = 0; j < grid_size; ++j) {
                 in[i * grid_size + j][0] = grid[i][j];
@@ -176,11 +174,7 @@ void particle_mesh_simulation_parallel(System &universe, double dt, int grid_siz
                     if (grid_x >= 1 && grid_x < grid_size - 1 && grid_y >= 1 && grid_y < grid_size - 1) {
                         double fx = -(potential[grid_x + 1][grid_y] - potential[grid_x - 1][grid_y]) / (2.0 * cell_size);
                         double fy = -(potential[grid_x][grid_y + 1] - potential[grid_x][grid_y - 1]) / (2.0 * cell_size);
-
                         body.acceleration = Vector(fx, fy);
-                        //if(DEBUG){
-                        //std::cout << "fx, fy: " << fx << " " << fy << " for Body " << body.title << "\n";
-                        //}
                     } else {
                         body.acceleration = Vector(0.0, 0.0);
                     }
@@ -224,9 +218,5 @@ void particle_mesh_simulation_parallel(System &universe, double dt, int grid_siz
     fftw_destroy_plan(backward_plan);
     fftw_free(in);
     fftw_free(out);
-
-    //FFTW thread
-    //fftw_cleanup_threads();
-
 }
 
